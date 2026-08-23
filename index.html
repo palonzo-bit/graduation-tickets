@@ -577,8 +577,35 @@
 
             }
 
+            if (!data.publicTicketCode) {
+
+              throw new Error(
+                "This graduate does not have a public ticket code."
+              );
+
+            }
+
+            const publicTicketRef =
+              doc(
+                db,
+                "publicTickets",
+                data.publicTicketCode
+              );
+
+            const publicTicketSnap =
+              await transaction.get(publicTicketRef);
+
+            if (!publicTicketSnap.exists()) {
+
+              throw new Error(
+                "Public ticket record not found."
+              );
+
+            }
+
             const newUsed =
               used + count;
+
 
             transaction.update(
               graduateRef,
@@ -586,6 +613,15 @@
                 ticketsUsed: newUsed
               }
             );
+
+
+            transaction.update(
+              publicTicketRef,
+              {
+                ticketsUsed: newUsed
+              }
+            );
+
 
             const checkInRef =
               doc(collection(db, "checkIns"));
