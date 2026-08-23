@@ -166,7 +166,7 @@
     import {
       getFirestore,
       doc,
-      getDoc
+      onSnapshot
     }
     from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
@@ -206,7 +206,7 @@
       params.get("code");
 
 
-    async function loadTicket() {
+    function startLiveTicket() {
 
       if (!ticketCode) {
 
@@ -219,101 +219,108 @@
 
       }
 
-      try {
 
-        const ticketRef =
-          doc(
-            db,
-            "publicTickets",
-            ticketCode
-          );
-
-        const ticketSnap =
-          await getDoc(ticketRef);
+      const ticketRef =
+        doc(
+          db,
+          "publicTickets",
+          ticketCode
+        );
 
 
-        if (!ticketSnap.exists()) {
+      onSnapshot(
+        ticketRef,
+
+        (ticketSnap) => {
+
+          if (!ticketSnap.exists()) {
+
+            ticketCard.style.display =
+              "none";
+
+            status.textContent =
+              "❌ We could not find this graduation ticket.";
+
+            status.classList.add("error");
+
+            return;
+
+          }
+
+
+          const data =
+            ticketSnap.data();
+
+          const allowed =
+            Number(data.ticketsAllowed);
+
+          const used =
+            Number(data.ticketsUsed);
+
+          const remaining =
+            allowed - used;
+
+
+          document.getElementById("graduateName").textContent =
+            data.graduateName;
+
+          document.getElementById("ticketsAllowed").textContent =
+            allowed;
+
+          document.getElementById("ticketsUsed").textContent =
+            used;
+
+          document.getElementById("ticketsRemaining").textContent =
+            remaining;
+
+
+          ticketCard.style.display =
+            "block";
+
+          status.classList.remove("error");
+
+
+          if (data.active === false) {
+
+            status.textContent =
+              "🚫 These graduation tickets are currently inactive.";
+
+            status.classList.add("error");
+
+          }
+
+          else if (remaining <= 0) {
+
+            status.textContent =
+              "All guest tickets have been used.";
+
+          }
+
+          else {
+
+            status.textContent =
+              "✅ Your graduation tickets are ready!";
+
+          }
+
+        },
+
+        (error) => {
+
+          console.error(error);
 
           status.textContent =
-            "❌ We could not find this graduation ticket.";
+            "❌ Unable to load your graduation tickets.";
 
           status.classList.add("error");
 
-          return;
-
         }
-
-
-        const data =
-          ticketSnap.data();
-
-        const allowed =
-          Number(data.ticketsAllowed);
-
-        const used =
-          Number(data.ticketsUsed);
-
-        const remaining =
-          allowed - used;
-
-
-        document.getElementById("graduateName").textContent =
-          data.graduateName;
-
-        document.getElementById("ticketsAllowed").textContent =
-          allowed;
-
-        document.getElementById("ticketsUsed").textContent =
-          used;
-
-        document.getElementById("ticketsRemaining").textContent =
-          remaining;
-
-
-        ticketCard.style.display =
-          "block";
-
-
-        if (data.active === false) {
-
-          status.textContent =
-            "🚫 These graduation tickets are currently inactive.";
-
-          status.classList.add("error");
-
-        }
-
-        else if (remaining <= 0) {
-
-          status.textContent =
-            "All guest tickets have been used.";
-
-        }
-
-        else {
-
-          status.textContent =
-            "✅ Your graduation tickets are ready!";
-
-        }
-
-      }
-
-      catch (error) {
-
-        console.error(error);
-
-        status.textContent =
-          "❌ Unable to load your graduation tickets.";
-
-        status.classList.add("error");
-
-      }
+      );
 
     }
 
 
-    loadTicket();
+    startLiveTicket();
 
   </script>
 
