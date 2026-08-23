@@ -17,7 +17,7 @@
     }
 
     .card {
-      max-width: 600px;
+      max-width: 650px;
       margin: 0 auto;
       background: white;
       padding: 35px;
@@ -35,8 +35,8 @@
     }
 
     button {
-      margin-top: 10px;
-      padding: 12px 22px;
+      margin: 8px;
+      padding: 12px 20px;
       border: none;
       border-radius: 8px;
       font-size: 16px;
@@ -57,6 +57,18 @@
       font-weight: bold;
     }
 
+    .ticket-controls {
+      margin-top: 25px;
+      text-align: center;
+      display: none;
+    }
+
+    .ticket-number {
+      font-size: 42px;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
     #logoutBtn {
       display: none;
     }
@@ -69,7 +81,7 @@
 
     <h1>🎓 Graduation Tickets</h1>
 
-    <h2>Staff Login</h2>
+    <h2>Staff Check-In</h2>
 
     <div id="loginBox">
 
@@ -123,8 +135,32 @@
 
       <p>
         <strong>Tickets Remaining:</strong>
-        <span id="ticketsRemaining"></span>
       </p>
+
+      <div class="ticket-number" id="ticketsRemaining"></div>
+
+    </div>
+
+
+    <div class="ticket-controls" id="ticketControls">
+
+      <h3>How many guests are entering now?</h3>
+
+      <button class="useTicketBtn" data-count="1">
+        Use 1 Ticket
+      </button>
+
+      <button class="useTicketBtn" data-count="2">
+        Use 2 Tickets
+      </button>
+
+      <button class="useTicketBtn" data-count="3">
+        Use 3 Tickets
+      </button>
+
+      <button class="useTicketBtn" data-count="4">
+        Use 4 Tickets
+      </button>
 
     </div>
 
@@ -139,7 +175,8 @@
     import {
       getFirestore,
       doc,
-      getDoc
+      getDoc,
+      runTransaction
     }
     from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
@@ -174,6 +211,8 @@
     const db = getFirestore(app);
 
     const auth = getAuth(app);
+
+    const graduateId = "TEST001";
 
 
     const loginBtn =
@@ -237,9 +276,9 @@
           "inline-block";
 
         status.textContent =
-          "✅ Signed in. Loading test graduate...";
+          "✅ Signed in.";
 
-        await loadTestGraduate();
+        await loadGraduate();
 
       }
 
@@ -254,6 +293,9 @@
         document.getElementById("graduateInfo").style.display =
           "none";
 
+        document.getElementById("ticketControls").style.display =
+          "none";
+
         status.textContent =
           "Please sign in.";
 
@@ -262,53 +304,68 @@
     });
 
 
-    async function loadTestGraduate() {
+    async function loadGraduate() {
 
       try {
 
         const graduateRef =
-          doc(db, "graduates", "TEST001");
+          doc(db, "graduates", graduateId);
 
         const graduateSnap =
           await getDoc(graduateRef);
 
 
-        if (graduateSnap.exists()) {
-
-          const data =
-            graduateSnap.data();
-
-          const remaining =
-            data.ticketsAllowed - data.ticketsUsed;
-
-
-          document.getElementById("graduateName").textContent =
-            data.name;
-
-          document.getElementById("studentId").textContent =
-            data.studentId;
-
-          document.getElementById("ticketsAllowed").textContent =
-            data.ticketsAllowed;
-
-          document.getElementById("ticketsUsed").textContent =
-            data.ticketsUsed;
-
-          document.getElementById("ticketsRemaining").textContent =
-            remaining;
-
-          document.getElementById("graduateInfo").style.display =
-            "block";
+        if (!graduateSnap.exists()) {
 
           status.textContent =
-            "✅ Graduate record loaded successfully!";
+            "❌ Graduate not found.";
+
+          return;
+
+        }
+
+
+        const data =
+          graduateSnap.data();
+
+        const remaining =
+          data.ticketsAllowed - data.ticketsUsed;
+
+
+        document.getElementById("graduateName").textContent =
+          data.name;
+
+        document.getElementById("studentId").textContent =
+          data.studentId;
+
+        document.getElementById("ticketsAllowed").textContent =
+          data.ticketsAllowed;
+
+        document.getElementById("ticketsUsed").textContent =
+          data.ticketsUsed;
+
+        document.getElementById("ticketsRemaining").textContent =
+          remaining;
+
+
+        document.getElementById("graduateInfo").style.display =
+          "block";
+
+        document.getElementById("ticketControls").style.display =
+          remaining > 0 ? "block" : "none";
+
+
+        if (remaining === 0) {
+
+          status.textContent =
+            "🚫 All guest tickets have been used.";
 
         }
 
         else {
 
           status.textContent =
-            "❌ TEST001 was not found.";
+            "✅ Ready for guest check-in.";
 
         }
 
@@ -319,11 +376,106 @@
         console.error(error);
 
         status.textContent =
-          "❌ Signed in, but Firestore could not load the record.";
+          "❌ Could not load graduate.";
 
       }
 
     }
+
+
+    async function useTickets(count) {
+
+      const graduateRef =
+        doc(db, "graduates", graduateId);
+
+      try {
+
+        await runTransaction(db, async (transaction) => {
+
+          const graduateSnap =
+            await transaction.get(graduateRef);
+
+
+          if (!graduateSnap.exists()) {
+
+            throw new Error("Graduate not found.");
+
+          }
+
+
+          const data =
+            graduateSnap.data();
+
+          const remaining =
+            data.ticketsAllowed - data.ticketsUsed;
+
+
+          if (count > remaining) {
+
+            throw new Error(
+              `Only ${remaining} ticket(s) remain.`
+            );
+
+          }
+
+
+          const newUsed =
+            data.ticketsUsed + count;
+
+
+          transaction.update(
+            graduateRef,
+            {
+              ticketsUsed: newUsed
+            }
+          );
+
+        });
+
+
+        status.textContent =
+          `✅ ${count} guest ticket(s) checked in.`;
+
+        await loadGraduate();
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+          "❌ " + error.message;
+
+      }
+
+    }
+
+
+    document
+      .querySelectorAll(".useTicketBtn")
+      .forEach((button) => {
+
+        button.addEventListener("click", () => {
+
+          const count =
+            Number(button.dataset.count);
+
+          const confirmUse =
+            confirm(
+              `Check in ${count} guest ticket(s)?`
+            );
+
+
+          if (confirmUse) {
+
+            useTickets(count);
+
+          }
+
+        });
+
+      });
 
   </script>
 
