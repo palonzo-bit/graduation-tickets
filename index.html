@@ -229,12 +229,14 @@
     from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 
     import {
-      getFirestore,
-      doc,
-      getDoc,
-      runTransaction
-    }
-    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+  getFirestore,
+  doc,
+  getDoc,
+  runTransaction,
+  collection,
+  serverTimestamp
+}
+from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
     import {
       getAuth,
@@ -581,6 +583,20 @@
           }
         );
 
+        const checkInRef =
+  doc(collection(db, "checkIns"));
+
+transaction.set(
+  checkInRef,
+  {
+    graduateId: currentGraduateId,
+    graduateName: data.name,
+    studentId: data.studentId,
+    guestCount: count,
+    staffEmail: auth.currentUser.email,
+    timestamp: serverTimestamp()
+  }
+);
 
         await loadGraduate();
 
