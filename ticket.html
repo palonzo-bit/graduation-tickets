@@ -44,11 +44,7 @@
     .graduate-name {
       font-size: 28px;
       font-weight: bold;
-      margin-bottom: 8px;
-    }
-
-    .student-id {
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
     .big-number {
@@ -122,11 +118,6 @@
         class="graduate-name">
       </div>
 
-      <div class="student-id">
-        Student ID:
-        <strong id="studentId"></strong>
-      </div>
-
       <div class="remaining-label">
         Guest Tickets Remaining
       </div>
@@ -139,12 +130,18 @@
       <div class="counts">
 
         <div class="count-box">
-          <div class="count-number" id="ticketsAllowed"></div>
+          <div
+            class="count-number"
+            id="ticketsAllowed">
+          </div>
           <div>Allowed</div>
         </div>
 
         <div class="count-box">
-          <div class="count-number" id="ticketsUsed"></div>
+          <div
+            class="count-number"
+            id="ticketsUsed">
+          </div>
           <div>Used</div>
         </div>
 
@@ -205,13 +202,13 @@
     const params =
       new URLSearchParams(window.location.search);
 
-    const graduateId =
-      params.get("id");
+    const ticketCode =
+      params.get("code");
 
 
     async function loadTicket() {
 
-      if (!graduateId) {
+      if (!ticketCode) {
 
         status.textContent =
           "❌ No graduation ticket was found in this link.";
@@ -224,21 +221,21 @@
 
       try {
 
-        const graduateRef =
+        const ticketRef =
           doc(
             db,
-            "graduates",
-            graduateId.toUpperCase()
+            "publicTickets",
+            ticketCode
           );
 
-        const graduateSnap =
-          await getDoc(graduateRef);
+        const ticketSnap =
+          await getDoc(ticketRef);
 
 
-        if (!graduateSnap.exists()) {
+        if (!ticketSnap.exists()) {
 
           status.textContent =
-            "❌ We could not find this graduate ticket.";
+            "❌ We could not find this graduation ticket.";
 
           status.classList.add("error");
 
@@ -248,7 +245,7 @@
 
 
         const data =
-          graduateSnap.data();
+          ticketSnap.data();
 
         const allowed =
           Number(data.ticketsAllowed);
@@ -261,10 +258,7 @@
 
 
         document.getElementById("graduateName").textContent =
-          data.name;
-
-        document.getElementById("studentId").textContent =
-          data.studentID;
+          data.graduateName;
 
         document.getElementById("ticketsAllowed").textContent =
           allowed;
