@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Claim Graduation Tickets</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 25px 15px;
+      color: #222;
+      text-align: center;
+    }
+
+    .card {
+      max-width: 520px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      margin-bottom: 24px;
+    }
+
+    .instructions {
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 14px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 14px;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-weight: bold;
+      line-height: 1.5;
+    }
+
+    .success {
+      margin-top: 22px;
+      padding: 20px;
+      border-radius: 14px;
+      background: #eef8ee;
+      display: none;
+    }
+
+    .error {
+      color: #b00020;
+    }
+
+    .small {
+      margin-top: 18px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .ticket-button {
+      display: inline-block;
+      box-sizing: border-box;
+      width: 100%;
+      margin-top: 15px;
+      padding: 14px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: bold;
+      background: #222;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+
+    <h1>🎓 Claim Your Graduation Tickets</h1>
+
+    <div class="subtitle">
+      Clark County Acceleration Academies
+    </div>
+
+    <div class="instructions">
+      Enter your name and 6-digit birthday to access your graduation guest tickets.
+    </div>
+
+
+    <input
+      id="firstName"
+      type="text"
+      placeholder="First name"
+      autocomplete="given-name"
+    >
+
+    <input
+      id="lastName"
+      type="text"
+      placeholder="Last name"
+      autocomplete="family-name"
+    >
+
+    <input
+      id="birthday"
+      type="text"
+      inputmode="numeric"
+      maxlength="6"
+      placeholder="Birthday MMDDYY"
+      autocomplete="off"
+    >
+
+
+    <button id="claimBtn">
+      🎟️ Find My Tickets
+    </button>
+
+
+    <div id="status" class="status"></div>
+
+
+    <div id="successBox" class="success">
+
+      <h2>🎉 Tickets Found!</h2>
+
+      <div id="graduateName"></div>
+
+      <p>
+        Your graduation guest tickets are ready.
+      </p>
+
+      <a
+        id="ticketLink"
+        class="ticket-button"
+        href="#">
+        Open My Tickets
+      </a>
+
+    </div>
+
+
+    <div class="small">
+      Your birthday is used only to verify your ticket access and is not shown on your graduation ticket.
+    </div>
+
+  </div>
+
+
+  <script type="module">
+
+    import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      updateDoc,
+      serverTimestamp
+    }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+
+    const firebaseConfig = {
+
+      apiKey: "AIzaSyAk7ZT1pCcN7wFY0rHRRoCbDvHEHGBoptY",
+
+      authDomain: "graduation-tickets-1897c.firebaseapp.com",
+
+      projectId: "graduation-tickets-1897c",
+
+      storageBucket: "graduation-tickets-1897c.firebasestorage.app",
+
+      messagingSenderId: "570671585141",
+
+      appId: "1:570671585141:web:65c2c0436eead0e184e53c"
+
+    };
+
+
+    const app =
+      initializeApp(firebaseConfig);
+
+    const db =
+      getFirestore(app);
+
+
+    const claimBtn =
+      document.getElementById("claimBtn");
+
+    const status =
+      document.getElementById("status");
+
+    const successBox =
+      document.getElementById("successBox");
+
+
+    function normalizeName(value) {
+
+      return value
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+
+    }
+
+
+    function cleanBirthday(value) {
+
+      return value
+        .replace(/\D/g, "")
+        .slice(0, 6);
+
+    }
+
+
+    async function sha256(text) {
+
+      const encoder =
+        new TextEncoder();
+
+      const data =
+        encoder.encode(text);
+
+      const digest =
+        await crypto.subtle.digest(
+          "SHA-256",
+          data
+        );
+
+      return Array
+        .from(new Uint8Array(digest))
+        .map(
+          byte =>
+            byte
+              .toString(16)
+              .padStart(2, "0")
+        )
+        .join("");
+
+    }
+
+
+    async function claimTickets() {
+
+      successBox.style.display =
+        "none";
+
+      status.classList.remove("error");
+
+
+      const firstName =
+        normalizeName(
+          document.getElementById("firstName").value
+        );
+
+      const lastName =
+        normalizeName(
+          document.getElementById("lastName").value
+        );
+
+      const birthday =
+        cleanBirthday(
+          document.getElementById("birthday").value
+        );
+
+
+      if (!firstName || !lastName) {
+
+        status.textContent =
+          "❌ Please enter your first and last name.";
+
+        status.classList.add("error");
+
+        return;
+
+      }
+
+
+      if (birthday.length !== 6) {
+
+        status.textContent =
+          "❌ Enter your birthday as 6 digits: MMDDYY.";
+
+        status.classList.add("error");
+
+        return;
+
+      }
+
+
+      claimBtn.disabled =
+        true;
+
+      status.textContent =
+        "Looking for your graduation tickets...";
+
+
+      try {
+
+        const lookupText =
+          `${firstName}|${lastName}|${birthday}`;
+
+        const lookupHash =
+          await sha256(lookupText);
+
+
+        const claimRef =
+          doc(
+            db,
+            "ticketClaims",
+            lookupHash
+          );
+
+
+        const claimSnap =
+          await getDoc(claimRef);
+
+
+        if (!claimSnap.exists()) {
+
+          status.textContent =
+            "❌ We could not match that information. Please check your name and birthday or ask a staff member for help.";
+
+          status.classList.add("error");
+
+          claimBtn.disabled =
+            false;
+
+          return;
+
+        }
+
+
+        const data =
+          claimSnap.data();
+
+
+        if (data.active === false) {
+
+          status.textContent =
+            "❌ These tickets are not currently active. Please see a staff member.";
+
+          status.classList.add("error");
+
+          claimBtn.disabled =
+            false;
+
+          return;
+
+        }
+
+
+        if (!data.publicTicketCode) {
+
+          throw new Error(
+            "Ticket code is missing."
+          );
+
+        }
+
+
+        if (data.claimed !== true) {
+
+          await updateDoc(
+            claimRef,
+            {
+              claimed: true,
+              claimedAt: serverTimestamp()
+            }
+          );
+
+        }
+
+
+        const ticketURL =
+          `ticket.html?code=${encodeURIComponent(data.publicTicketCode)}`;
+
+
+        document.getElementById("graduateName").textContent =
+          data.graduateName;
+
+
+        document.getElementById("ticketLink").href =
+          ticketURL;
+
+
+        successBox.style.display =
+          "block";
+
+
+        status.textContent =
+          "✅ We found your graduation tickets!";
+
+
+        claimBtn.disabled =
+          false;
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+          "❌ Something went wrong while accessing your tickets. Please ask a staff member for help.";
+
+        status.classList.add("error");
+
+        claimBtn.disabled =
+          false;
+
+      }
+
+    }
+
+
+    claimBtn.addEventListener(
+      "click",
+      claimTickets
+    );
+
+
+    document
+      .getElementById("birthday")
+      .addEventListener(
+        "input",
+        (event) => {
+
+          event.target.value =
+            cleanBirthday(
+              event.target.value
+            );
+
+        }
+      );
+
+  </script>
+
+</body>
+</html>
