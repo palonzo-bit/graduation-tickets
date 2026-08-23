@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>My Graduation Tickets</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 24px 14px;
+      color: #222;
+      text-align: center;
+    }
+
+    .card {
+      max-width: 520px;
+      margin: 0 auto;
+      background: white;
+      padding: 28px;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      margin-bottom: 24px;
+    }
+
+    .ticket-card {
+      display: none;
+      margin-top: 24px;
+      background: #eef3f8;
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .graduate-name {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .student-id {
+      margin-bottom: 24px;
+    }
+
+    .big-number {
+      font-size: 64px;
+      font-weight: bold;
+      line-height: 1;
+      margin: 10px 0;
+    }
+
+    .remaining-label {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .counts {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .count-box {
+      flex: 1;
+      background: white;
+      padding: 16px 8px;
+      border-radius: 12px;
+    }
+
+    .count-number {
+      font-size: 26px;
+      font-weight: bold;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
+    .warning {
+      margin-top: 22px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #fff6d9;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .error {
+      color: #b00020;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+
+    <h1>🎓 My Graduation Tickets</h1>
+
+    <div class="subtitle">
+      Clark County Acceleration Academies
+    </div>
+
+    <div id="status" class="status">
+      Loading your tickets...
+    </div>
+
+    <div id="ticketCard" class="ticket-card">
+
+      <div
+        id="graduateName"
+        class="graduate-name">
+      </div>
+
+      <div class="student-id">
+        Student ID:
+        <strong id="studentId"></strong>
+      </div>
+
+      <div class="remaining-label">
+        Guest Tickets Remaining
+      </div>
+
+      <div
+        id="ticketsRemaining"
+        class="big-number">
+      </div>
+
+      <div class="counts">
+
+        <div class="count-box">
+          <div class="count-number" id="ticketsAllowed"></div>
+          <div>Allowed</div>
+        </div>
+
+        <div class="count-box">
+          <div class="count-number" id="ticketsUsed"></div>
+          <div>Used</div>
+        </div>
+
+      </div>
+
+      <div class="warning">
+        🎟️ Your guest admissions are tracked digitally.
+        Staff will check in your guests at the event.
+        You do not need to use all of your tickets at the same time.
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <script type="module">
+
+    import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+    import {
+      getFirestore,
+      doc,
+      getDoc
+    }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+
+    const firebaseConfig = {
+
+      apiKey: "AIzaSyAk7ZT1pCcN7wFY0rHRRoCbDvHEHGBoptY",
+
+      authDomain: "graduation-tickets-1897c.firebaseapp.com",
+
+      projectId: "graduation-tickets-1897c",
+
+      storageBucket: "graduation-tickets-1897c.firebasestorage.app",
+
+      messagingSenderId: "570671585141",
+
+      appId: "1:570671585141:web:65c2c0436eead0e184e53c"
+
+    };
+
+
+    const app = initializeApp(firebaseConfig);
+
+    const db = getFirestore(app);
+
+    const status =
+      document.getElementById("status");
+
+    const ticketCard =
+      document.getElementById("ticketCard");
+
+
+    const params =
+      new URLSearchParams(window.location.search);
+
+    const graduateId =
+      params.get("id");
+
+
+    async function loadTicket() {
+
+      if (!graduateId) {
+
+        status.textContent =
+          "❌ No graduation ticket was found in this link.";
+
+        status.classList.add("error");
+
+        return;
+
+      }
+
+      try {
+
+        const graduateRef =
+          doc(
+            db,
+            "graduates",
+            graduateId.toUpperCase()
+          );
+
+        const graduateSnap =
+          await getDoc(graduateRef);
+
+
+        if (!graduateSnap.exists()) {
+
+          status.textContent =
+            "❌ We could not find this graduate ticket.";
+
+          status.classList.add("error");
+
+          return;
+
+        }
+
+
+        const data =
+          graduateSnap.data();
+
+        const allowed =
+          Number(data.ticketsAllowed);
+
+        const used =
+          Number(data.ticketsUsed);
+
+        const remaining =
+          allowed - used;
+
+
+        document.getElementById("graduateName").textContent =
+          data.name;
+
+        document.getElementById("studentId").textContent =
+          data.studentID;
+
+        document.getElementById("ticketsAllowed").textContent =
+          allowed;
+
+        document.getElementById("ticketsUsed").textContent =
+          used;
+
+        document.getElementById("ticketsRemaining").textContent =
+          remaining;
+
+
+        ticketCard.style.display =
+          "block";
+
+
+        if (data.active === false) {
+
+          status.textContent =
+            "🚫 These graduation tickets are currently inactive.";
+
+          status.classList.add("error");
+
+        }
+
+        else if (remaining <= 0) {
+
+          status.textContent =
+            "All guest tickets have been used.";
+
+        }
+
+        else {
+
+          status.textContent =
+            "✅ Your graduation tickets are ready!";
+
+        }
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+          "❌ Unable to load your graduation tickets.";
+
+        status.classList.add("error");
+
+      }
+
+    }
+
+
+    loadTicket();
+
+  </script>
+
+</body>
+</html>
