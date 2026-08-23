@@ -25,16 +25,22 @@
       box-shadow: 0 8px 25px rgba(0,0,0,0.08);
     }
 
-    h1 {
-      margin-bottom: 10px;
+    .ticket-box {
+      margin-top: 25px;
+      padding: 20px;
+      border-radius: 12px;
+      background: #eef3f8;
+      text-align: left;
     }
 
-    .status {
-      margin-top: 25px;
-      padding: 15px;
-      border-radius: 10px;
-      background: #eef3f8;
+    .success {
       font-weight: bold;
+      margin-top: 20px;
+    }
+
+    .error {
+      font-weight: bold;
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -42,17 +48,43 @@
 <body>
 
   <div class="card">
+
     <h1>🎓 Graduation Tickets</h1>
 
     <h2>Clark County Acceleration Academies</h2>
 
-    <p>
-      Digital guest ticket system for graduation.
-    </p>
+    <p>Testing our live graduate database connection.</p>
 
-    <div class="status" id="firebaseStatus">
-      Connecting to Firebase...
+    <div id="status">
+      Looking up TEST001...
     </div>
+
+    <div class="ticket-box" id="graduateInfo" style="display:none;">
+
+      <h2 id="graduateName"></h2>
+
+      <p>
+        <strong>Student ID:</strong>
+        <span id="studentId"></span>
+      </p>
+
+      <p>
+        <strong>Tickets Allowed:</strong>
+        <span id="ticketsAllowed"></span>
+      </p>
+
+      <p>
+        <strong>Tickets Used:</strong>
+        <span id="ticketsUsed"></span>
+      </p>
+
+      <p>
+        <strong>Tickets Remaining:</strong>
+        <span id="ticketsRemaining"></span>
+      </p>
+
+    </div>
+
   </div>
 
 
@@ -61,7 +93,11 @@
     import { initializeApp }
     from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 
-    import { getFirestore }
+    import {
+      getFirestore,
+      doc,
+      getDoc
+    }
     from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 
@@ -87,10 +123,82 @@
     const db = getFirestore(app);
 
 
-    document.getElementById("firebaseStatus").innerHTML =
-      "✅ Website connected to Firebase!";
+    async function loadTestGraduate() {
 
-    console.log("Firebase connected successfully.");
+      const status = document.getElementById("status");
+
+      try {
+
+        const graduateRef =
+          doc(db, "graduates", "TEST001");
+
+        const graduateSnap =
+          await getDoc(graduateRef);
+
+
+        if (graduateSnap.exists()) {
+
+          const data = graduateSnap.data();
+
+          const remaining =
+            data.ticketsAllowed - data.ticketsUsed;
+
+
+          document.getElementById("graduateName").textContent =
+            data.name;
+
+          document.getElementById("studentId").textContent =
+            data.studentId;
+
+          document.getElementById("ticketsAllowed").textContent =
+            data.ticketsAllowed;
+
+          document.getElementById("ticketsUsed").textContent =
+            data.ticketsUsed;
+
+          document.getElementById("ticketsRemaining").textContent =
+            remaining;
+
+
+          document.getElementById("graduateInfo").style.display =
+            "block";
+
+          status.innerHTML =
+            "✅ TEST001 found in Firebase!";
+
+          status.className =
+            "success";
+
+        }
+
+        else {
+
+          status.innerHTML =
+            "❌ TEST001 was not found.";
+
+          status.className =
+            "error";
+
+        }
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        status.innerHTML =
+          "❌ Firebase could not read the graduate record.";
+
+        status.className =
+          "error";
+
+      }
+
+    }
+
+
+    loadTestGraduate();
 
   </script>
 
