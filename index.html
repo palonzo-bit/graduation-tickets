@@ -572,18 +572,15 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
             }
 
 
-            transaction.update(
-              graduateRef,
-              {
-                ticketsUsed:
-                  data.ticketsUsed + count
-              }
-            );
+        transaction.update(
+  graduateRef,
+  {
+    ticketsUsed:
+      data.ticketsUsed + count
+  }
+);
 
-          }
-        );
-
-        const checkInRef =
+const checkInRef =
   doc(collection(db, "checkIns"));
 
 transaction.set(
@@ -596,7 +593,7 @@ transaction.set(
     staffEmail: auth.currentUser.email,
     timestamp: serverTimestamp()
   }
-);
+);   
 
         await loadGraduate();
 
