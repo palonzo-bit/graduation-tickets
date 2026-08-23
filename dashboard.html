@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Graduation Ticket Dashboard</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 25px 15px;
+      color: #222;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 25px;
+      border-radius: 18px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .login-card {
+      background: white;
+      padding: 25px;
+      border-radius: 16px;
+      max-width: 500px;
+      margin: 0 auto 20px auto;
+      text-align: center;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 13px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #logoutBtn {
+      display: none;
+    }
+
+    .status {
+      text-align: center;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+
+    .summary {
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .summary-card {
+      background: white;
+      padding: 18px;
+      border-radius: 14px;
+      text-align: center;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+
+    .summary-number {
+      font-size: 34px;
+      font-weight: bold;
+    }
+
+    .table-wrap {
+      display: none;
+      background: white;
+      border-radius: 16px;
+      overflow-x: auto;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 780px;
+    }
+
+    th,
+    td {
+      padding: 14px;
+      border-bottom: 1px solid #e6e6e6;
+      text-align: left;
+    }
+
+    th {
+      background: #eef3f8;
+    }
+
+    .yes {
+      font-weight: bold;
+    }
+
+    .no {
+      font-weight: bold;
+    }
+
+    .remaining {
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    @media (max-width: 700px) {
+      .summary {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <div class="header">
+      <h1>🎓 Graduation Ticket Dashboard</h1>
+      <p>Clark County Acceleration Academies</p>
+
+      <button id="logoutBtn">
+        Sign Out
+      </button>
+    </div>
+
+
+    <div
+      id="loginCard"
+      class="login-card">
+
+      <h2>Staff Login</h2>
+
+      <input
+        type="email"
+        id="email"
+        placeholder="Staff email"
+      >
+
+      <input
+        type="password"
+        id="password"
+        placeholder="Password"
+      >
+
+      <button id="loginBtn">
+        Sign In
+      </button>
+
+    </div>
+
+
+    <div
+      id="status"
+      class="status">
+      Please sign in.
+    </div>
+
+
+    <div
+      id="summary"
+      class="summary">
+
+      <div class="summary-card">
+        <div
+          id="totalGraduates"
+          class="summary-number">
+          0
+        </div>
+        <div>Graduates</div>
+      </div>
+
+      <div class="summary-card">
+        <div
+          id="claimedCount"
+          class="summary-number">
+          0
+        </div>
+        <div>Claimed</div>
+      </div>
+
+      <div class="summary-card">
+        <div
+          id="usedCount"
+          class="summary-number">
+          0
+        </div>
+        <div>Guests Checked In</div>
+      </div>
+
+      <div class="summary-card">
+        <div
+          id="remainingCount"
+          class="summary-number">
+          0
+        </div>
+        <div>Tickets Remaining</div>
+      </div>
+
+    </div>
+
+
+    <div
+      id="tableWrap"
+      class="table-wrap">
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>Graduate</th>
+            <th>Student ID</th>
+            <th>Claimed</th>
+            <th>Allowed</th>
+            <th>Used</th>
+            <th>Remaining</th>
+          </tr>
+        </thead>
+
+        <tbody id="graduateTable">
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+  <script type="module">
+
+    import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+    import {
+      getFirestore,
+      collection,
+      onSnapshot
+    }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
+
+    const firebaseConfig = {
+
+      apiKey: "AIzaSyAk7ZT1pCcN7wFY0rHRRoCbDvHEHGBoptY",
+
+      authDomain: "graduation-tickets-1897c.firebaseapp.com",
+
+      projectId: "graduation-tickets-1897c",
+
+      storageBucket: "graduation-tickets-1897c.firebasestorage.app",
+
+      messagingSenderId: "570671585141",
+
+      appId: "1:570671585141:web:65c2c0436eead0e184e53c"
+
+    };
+
+
+    const app =
+      initializeApp(firebaseConfig);
+
+    const db =
+      getFirestore(app);
+
+    const auth =
+      getAuth(app);
+
+
+    const loginCard =
+      document.getElementById("loginCard");
+
+    const loginBtn =
+      document.getElementById("loginBtn");
+
+    const logoutBtn =
+      document.getElementById("logoutBtn");
+
+    const status =
+      document.getElementById("status");
+
+    const summary =
+      document.getElementById("summary");
+
+    const tableWrap =
+      document.getElementById("tableWrap");
+
+    const graduateTable =
+      document.getElementById("graduateTable");
+
+
+    let unsubscribeGraduates =
+      null;
+
+    let unsubscribeClaims =
+      null;
+
+    let graduatesData =
+      [];
+
+    let claimsData =
+      [];
+
+
+    loginBtn.addEventListener(
+      "click",
+      async () => {
+
+        const email =
+          document
+            .getElementById("email")
+            .value
+            .trim();
+
+        const password =
+          document
+            .getElementById("password")
+            .value;
+
+        status.textContent =
+          "Signing in...";
+
+        try {
+
+          await signInWithEmailAndPassword(
+            auth,
+            email,
+            password
+          );
+
+        }
+
+        catch (error) {
+
+          console.error(error);
+
+          status.textContent =
+            "❌ Unable to sign in. Check your email and password.";
+
+        }
+
+      }
+    );
+
+
+    logoutBtn.addEventListener(
+      "click",
+      async () => {
+
+        await signOut(auth);
+
+      }
+    );
+
+
+    onAuthStateChanged(
+      auth,
+      (user) => {
+
+        if (user) {
+
+          loginCard.style.display =
+            "none";
+
+          logoutBtn.style.display =
+            "inline-block";
+
+          summary.style.display =
+            "grid";
+
+          tableWrap.style.display =
+            "block";
+
+          status.textContent =
+            "✅ Dashboard connected.";
+
+          startLiveDashboard();
+
+        }
+
+        else {
+
+          if (unsubscribeGraduates) {
+            unsubscribeGraduates();
+            unsubscribeGraduates = null;
+          }
+
+          if (unsubscribeClaims) {
+            unsubscribeClaims();
+            unsubscribeClaims = null;
+          }
+
+          loginCard.style.display =
+            "block";
+
+          logoutBtn.style.display =
+            "none";
+
+          summary.style.display =
+            "none";
+
+          tableWrap.style.display =
+            "none";
+
+          status.textContent =
+            "Please sign in.";
+
+        }
+
+      }
+    );
+
+
+    function startLiveDashboard() {
+
+      const graduatesRef =
+        collection(
+          db,
+          "graduates"
+        );
+
+      const claimsRef =
+        collection(
+          db,
+          "ticketClaims"
+        );
+
+
+      unsubscribeGraduates =
+        onSnapshot(
+          graduatesRef,
+          (snapshot) => {
+
+            graduatesData =
+              snapshot.docs.map(
+                docSnap => ({
+                  id: docSnap.id,
+                  ...docSnap.data()
+                })
+              );
+
+            renderDashboard();
+
+          },
+
+          (error) => {
+
+            console.error(error);
+
+            status.textContent =
+              "❌ Could not load graduate data.";
+
+          }
+        );
+
+
+      unsubscribeClaims =
+        onSnapshot(
+          claimsRef,
+          (snapshot) => {
+
+            claimsData =
+              snapshot.docs.map(
+                docSnap => ({
+                  id: docSnap.id,
+                  ...docSnap.data()
+                })
+              );
+
+            renderDashboard();
+
+          },
+
+          (error) => {
+
+            console.error(error);
+
+            status.textContent =
+              "❌ Could not load claim data.";
+
+          }
+        );
+
+    }
+
+
+    function renderDashboard() {
+
+      graduateTable.innerHTML =
+        "";
+
+
+      const claimedCodes =
+        new Set(
+          claimsData
+            .filter(
+              claim =>
+                claim.claimed === true
+            )
+            .map(
+              claim =>
+                claim.publicTicketCode
+            )
+        );
+
+
+      let totalUsed =
+        0;
+
+      let totalRemaining =
+        0;
+
+      let claimedTotal =
+        0;
+
+
+      const sortedGraduates =
+        [...graduatesData]
+          .sort(
+            (a, b) =>
+              String(a.name)
+                .localeCompare(
+                  String(b.name)
+                )
+          );
+
+
+      sortedGraduates
+        .forEach(
+          graduate => {
+
+            const allowed =
+              Number(
+                graduate.ticketsAllowed || 0
+              );
+
+            const used =
+              Number(
+                graduate.ticketsUsed || 0
+              );
+
+            const remaining =
+              allowed - used;
+
+            const claimed =
+              claimedCodes.has(
+                graduate.publicTicketCode
+              );
+
+
+            totalUsed +=
+              used;
+
+            totalRemaining +=
+              remaining;
+
+            if (claimed) {
+              claimedTotal += 1;
+            }
+
+
+            const row =
+              document.createElement("tr");
+
+
+            row.innerHTML = `
+              <td>${graduate.name || ""}</td>
+              <td>${graduate.studentID || ""}</td>
+
+              <td class="${claimed ? "yes" : "no"}">
+                ${claimed ? "✅ Yes" : "❌ No"}
+              </td>
+
+              <td>
+                ${allowed}
+              </td>
+
+              <td>
+                ${used}
+              </td>
+
+              <td class="remaining">
+                ${remaining}
+              </td>
+            `;
+
+
+            graduateTable
+              .appendChild(row);
+
+          }
+        );
+
+
+      document
+        .getElementById("totalGraduates")
+        .textContent =
+        graduatesData.length;
+
+
+      document
+        .getElementById("claimedCount")
+        .textContent =
+        claimedTotal;
+
+
+      document
+        .getElementById("usedCount")
+        .textContent =
+        totalUsed;
+
+
+      document
+        .getElementById("remainingCount")
+        .textContent =
+        totalRemaining;
+
+    }
+
+  </script>
+
+</body>
+</html>
