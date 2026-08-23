@@ -25,22 +25,40 @@
       box-shadow: 0 8px 25px rgba(0,0,0,0.08);
     }
 
+    input {
+      width: 90%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 12px 22px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
     .ticket-box {
       margin-top: 25px;
       padding: 20px;
       border-radius: 12px;
       background: #eef3f8;
       text-align: left;
+      display: none;
     }
 
-    .success {
+    .status {
+      margin-top: 18px;
       font-weight: bold;
-      margin-top: 20px;
     }
 
-    .error {
-      font-weight: bold;
-      margin-top: 20px;
+    #logoutBtn {
+      display: none;
     }
   </style>
 </head>
@@ -51,15 +69,40 @@
 
     <h1>🎓 Graduation Tickets</h1>
 
-    <h2>Clark County Acceleration Academies</h2>
+    <h2>Staff Login</h2>
 
-    <p>Testing our live graduate database connection.</p>
+    <div id="loginBox">
 
-    <div id="status">
-      Looking up TEST001...
+      <input
+        type="email"
+        id="email"
+        placeholder="Staff email"
+      >
+
+      <input
+        type="password"
+        id="password"
+        placeholder="Password"
+      >
+
+      <br>
+
+      <button id="loginBtn">
+        Sign In
+      </button>
+
     </div>
 
-    <div class="ticket-box" id="graduateInfo" style="display:none;">
+    <button id="logoutBtn">
+      Sign Out
+    </button>
+
+    <div class="status" id="status">
+      Please sign in.
+    </div>
+
+
+    <div class="ticket-box" id="graduateInfo">
 
       <h2 id="graduateName"></h2>
 
@@ -100,6 +143,14 @@
     }
     from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
 
     const firebaseConfig = {
 
@@ -122,10 +173,96 @@
 
     const db = getFirestore(app);
 
+    const auth = getAuth(app);
+
+
+    const loginBtn =
+      document.getElementById("loginBtn");
+
+    const logoutBtn =
+      document.getElementById("logoutBtn");
+
+    const status =
+      document.getElementById("status");
+
+
+    loginBtn.addEventListener("click", async () => {
+
+      const email =
+        document.getElementById("email").value;
+
+      const password =
+        document.getElementById("password").value;
+
+      status.textContent =
+        "Signing in...";
+
+      try {
+
+        await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+          "❌ Unable to sign in. Check your email and password.";
+
+      }
+
+    });
+
+
+    logoutBtn.addEventListener("click", async () => {
+
+      await signOut(auth);
+
+    });
+
+
+    onAuthStateChanged(auth, async (user) => {
+
+      if (user) {
+
+        document.getElementById("loginBox").style.display =
+          "none";
+
+        logoutBtn.style.display =
+          "inline-block";
+
+        status.textContent =
+          "✅ Signed in. Loading test graduate...";
+
+        await loadTestGraduate();
+
+      }
+
+      else {
+
+        document.getElementById("loginBox").style.display =
+          "block";
+
+        logoutBtn.style.display =
+          "none";
+
+        document.getElementById("graduateInfo").style.display =
+          "none";
+
+        status.textContent =
+          "Please sign in.";
+
+      }
+
+    });
+
 
     async function loadTestGraduate() {
-
-      const status = document.getElementById("status");
 
       try {
 
@@ -138,7 +275,8 @@
 
         if (graduateSnap.exists()) {
 
-          const data = graduateSnap.data();
+          const data =
+            graduateSnap.data();
 
           const remaining =
             data.ticketsAllowed - data.ticketsUsed;
@@ -159,25 +297,18 @@
           document.getElementById("ticketsRemaining").textContent =
             remaining;
 
-
           document.getElementById("graduateInfo").style.display =
             "block";
 
-          status.innerHTML =
-            "✅ TEST001 found in Firebase!";
-
-          status.className =
-            "success";
+          status.textContent =
+            "✅ Graduate record loaded successfully!";
 
         }
 
         else {
 
-          status.innerHTML =
+          status.textContent =
             "❌ TEST001 was not found.";
-
-          status.className =
-            "error";
 
         }
 
@@ -187,18 +318,12 @@
 
         console.error(error);
 
-        status.innerHTML =
-          "❌ Firebase could not read the graduate record.";
-
-        status.className =
-          "error";
+        status.textContent =
+          "❌ Signed in, but Firestore could not load the record.";
 
       }
 
     }
-
-
-    loadTestGraduate();
 
   </script>
 
