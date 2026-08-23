@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Graduation Tickets</title>
+  <title>Graduation Guest Check-In</title>
 
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #f4f7fb;
       margin: 0;
-      padding: 40px 20px;
+      padding: 30px 15px;
       text-align: center;
       color: #222;
     }
@@ -27,7 +27,8 @@
 
     input {
       width: 90%;
-      padding: 12px;
+      box-sizing: border-box;
+      padding: 13px;
       margin: 8px 0;
       border: 1px solid #ccc;
       border-radius: 8px;
@@ -35,25 +36,40 @@
     }
 
     button {
-      margin: 8px;
-      padding: 12px 20px;
+      margin: 7px;
+      padding: 12px 18px;
       border: none;
       border-radius: 8px;
       font-size: 16px;
       cursor: pointer;
     }
 
-    .ticket-box {
+    .lookup {
       margin-top: 25px;
       padding: 20px;
+      background: #f7f7f7;
+      border-radius: 12px;
+      display: none;
+    }
+
+    .ticket-box {
+      margin-top: 25px;
+      padding: 22px;
       border-radius: 12px;
       background: #eef3f8;
       text-align: left;
       display: none;
     }
 
-    .status {
-      margin-top: 18px;
+    .ticket-number {
+      font-size: 48px;
+      font-weight: bold;
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    .remaining-label {
+      text-align: center;
       font-weight: bold;
     }
 
@@ -63,10 +79,9 @@
       display: none;
     }
 
-    .ticket-number {
-      font-size: 42px;
+    .status {
+      margin-top: 18px;
       font-weight: bold;
-      margin: 10px 0;
     }
 
     #logoutBtn {
@@ -79,11 +94,13 @@
 
   <div class="card">
 
-    <h1>🎓 Graduation Tickets</h1>
+    <h1>🎓 Graduation Guest Check-In</h1>
+    <p>Clark County Acceleration Academies</p>
 
-    <h2>Staff Check-In</h2>
 
     <div id="loginBox">
+
+      <h2>Staff Login</h2>
 
       <input
         type="email"
@@ -105,9 +122,31 @@
 
     </div>
 
+
     <button id="logoutBtn">
       Sign Out
     </button>
+
+
+    <div class="lookup" id="lookupBox">
+
+      <h2>🔎 Find Graduate</h2>
+
+      <input
+        type="text"
+        id="graduateSearch"
+        placeholder="Enter Student ID"
+        autocomplete="off"
+      >
+
+      <br>
+
+      <button id="searchBtn">
+        Find Graduate
+      </button>
+
+    </div>
+
 
     <div class="status" id="status">
       Please sign in.
@@ -133,33 +172,50 @@
         <span id="ticketsUsed"></span>
       </p>
 
-      <p>
-        <strong>Tickets Remaining:</strong>
-      </p>
+      <div class="remaining-label">
+        Tickets Remaining
+      </div>
 
-      <div class="ticket-number" id="ticketsRemaining"></div>
+      <div
+        class="ticket-number"
+        id="ticketsRemaining">
+      </div>
 
     </div>
 
 
-    <div class="ticket-controls" id="ticketControls">
+    <div
+      class="ticket-controls"
+      id="ticketControls">
 
       <h3>How many guests are entering now?</h3>
 
       <button class="useTicketBtn" data-count="1">
-        Use 1 Ticket
+        🎟️ 1
       </button>
 
       <button class="useTicketBtn" data-count="2">
-        Use 2 Tickets
+        🎟️ 2
       </button>
 
       <button class="useTicketBtn" data-count="3">
-        Use 3 Tickets
+        🎟️ 3
       </button>
 
       <button class="useTicketBtn" data-count="4">
-        Use 4 Tickets
+        🎟️ 4
+      </button>
+
+      <button class="useTicketBtn" data-count="5">
+        🎟️ 5
+      </button>
+
+      <button class="useTicketBtn" data-count="6">
+        🎟️ 6
+      </button>
+
+      <button class="useTicketBtn" data-count="7">
+        🎟️ 7
       </button>
 
     </div>
@@ -207,12 +263,10 @@
 
 
     const app = initializeApp(firebaseConfig);
-
     const db = getFirestore(app);
-
     const auth = getAuth(app);
 
-    const graduateId = "TEST001";
+    let currentGraduateId = null;
 
 
     const loginBtn =
@@ -221,6 +275,12 @@
     const logoutBtn =
       document.getElementById("logoutBtn");
 
+    const searchBtn =
+      document.getElementById("searchBtn");
+
+    const searchInput =
+      document.getElementById("graduateSearch");
+
     const status =
       document.getElementById("status");
 
@@ -228,13 +288,12 @@
     loginBtn.addEventListener("click", async () => {
 
       const email =
-        document.getElementById("email").value;
+        document.getElementById("email").value.trim();
 
       const password =
         document.getElementById("password").value;
 
-      status.textContent =
-        "Signing in...";
+      status.textContent = "Signing in...";
 
       try {
 
@@ -265,7 +324,7 @@
     });
 
 
-    onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(auth, (user) => {
 
       if (user) {
 
@@ -275,19 +334,25 @@
         logoutBtn.style.display =
           "inline-block";
 
-        status.textContent =
-          "✅ Signed in.";
+        document.getElementById("lookupBox").style.display =
+          "block";
 
-        await loadGraduate();
+        status.textContent =
+          "✅ Signed in. Enter a Student ID.";
 
       }
 
       else {
 
+        currentGraduateId = null;
+
         document.getElementById("loginBox").style.display =
           "block";
 
         logoutBtn.style.display =
+          "none";
+
+        document.getElementById("lookupBox").style.display =
           "none";
 
         document.getElementById("graduateInfo").style.display =
@@ -304,12 +369,56 @@
     });
 
 
+    searchBtn.addEventListener("click", searchGraduate);
+
+
+    searchInput.addEventListener("keydown", (event) => {
+
+      if (event.key === "Enter") {
+        searchGraduate();
+      }
+
+    });
+
+
+    async function searchGraduate() {
+
+      const enteredId =
+        searchInput.value.trim().toUpperCase();
+
+      if (!enteredId) {
+
+        status.textContent =
+          "❌ Enter a Student ID.";
+
+        return;
+
+      }
+
+      currentGraduateId = enteredId;
+
+      status.textContent =
+        "Searching...";
+
+      await loadGraduate();
+
+    }
+
+
     async function loadGraduate() {
+
+      if (!currentGraduateId) {
+        return;
+      }
 
       try {
 
         const graduateRef =
-          doc(db, "graduates", graduateId);
+          doc(
+            db,
+            "graduates",
+            currentGraduateId
+          );
 
         const graduateSnap =
           await getDoc(graduateRef);
@@ -317,8 +426,14 @@
 
         if (!graduateSnap.exists()) {
 
+          document.getElementById("graduateInfo").style.display =
+            "none";
+
+          document.getElementById("ticketControls").style.display =
+            "none";
+
           status.textContent =
-            "❌ Graduate not found.";
+            "❌ Graduate not found. Check the Student ID.";
 
           return;
 
@@ -351,21 +466,32 @@
         document.getElementById("graduateInfo").style.display =
           "block";
 
+
         document.getElementById("ticketControls").style.display =
           remaining > 0 ? "block" : "none";
 
 
-        if (remaining === 0) {
+        if (data.active === false) {
+
+          document.getElementById("ticketControls").style.display =
+            "none";
 
           status.textContent =
-            "🚫 All guest tickets have been used.";
+            "🚫 This graduate's tickets are inactive.";
+
+        }
+
+        else if (remaining === 0) {
+
+          status.textContent =
+            "🚫 All guest tickets have already been used.";
 
         }
 
         else {
 
           status.textContent =
-            "✅ Ready for guest check-in.";
+            "✅ Graduate found. Ready for guest check-in.";
 
         }
 
@@ -385,58 +511,81 @@
 
     async function useTickets(count) {
 
+      if (!currentGraduateId) {
+        return;
+      }
+
+
       const graduateRef =
-        doc(db, "graduates", graduateId);
+        doc(
+          db,
+          "graduates",
+          currentGraduateId
+        );
+
 
       try {
 
-        await runTransaction(db, async (transaction) => {
+        await runTransaction(
+          db,
+          async (transaction) => {
 
-          const graduateSnap =
-            await transaction.get(graduateRef);
-
-
-          if (!graduateSnap.exists()) {
-
-            throw new Error("Graduate not found.");
-
-          }
+            const graduateSnap =
+              await transaction.get(graduateRef);
 
 
-          const data =
-            graduateSnap.data();
+            if (!graduateSnap.exists()) {
 
-          const remaining =
-            data.ticketsAllowed - data.ticketsUsed;
+              throw new Error(
+                "Graduate not found."
+              );
+
+            }
 
 
-          if (count > remaining) {
+            const data =
+              graduateSnap.data();
 
-            throw new Error(
-              `Only ${remaining} ticket(s) remain.`
+
+            if (data.active === false) {
+
+              throw new Error(
+                "These tickets are inactive."
+              );
+
+            }
+
+
+            const remaining =
+              data.ticketsAllowed -
+              data.ticketsUsed;
+
+
+            if (count > remaining) {
+
+              throw new Error(
+                `Only ${remaining} ticket(s) remain.`
+              );
+
+            }
+
+
+            transaction.update(
+              graduateRef,
+              {
+                ticketsUsed:
+                  data.ticketsUsed + count
+              }
             );
 
           }
+        );
 
-
-          const newUsed =
-            data.ticketsUsed + count;
-
-
-          transaction.update(
-            graduateRef,
-            {
-              ticketsUsed: newUsed
-            }
-          );
-
-        });
-
-
-        status.textContent =
-          `✅ ${count} guest ticket(s) checked in.`;
 
         await loadGraduate();
+
+        status.textContent =
+          `✅ ${count} guest(s) checked in successfully.`;
 
       }
 
@@ -456,24 +605,24 @@
       .querySelectorAll(".useTicketBtn")
       .forEach((button) => {
 
-        button.addEventListener("click", () => {
+        button.addEventListener(
+          "click",
+          () => {
 
-          const count =
-            Number(button.dataset.count);
+            const count =
+              Number(button.dataset.count);
 
-          const confirmUse =
-            confirm(
-              `Check in ${count} guest ticket(s)?`
-            );
+            const confirmUse =
+              confirm(
+                `Check in ${count} guest(s) for this graduate?`
+              );
 
-
-          if (confirmUse) {
-
-            useTickets(count);
+            if (confirmUse) {
+              useTickets(count);
+            }
 
           }
-
-        });
+        );
 
       });
 
