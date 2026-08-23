@@ -3,13 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Graduation Tickets</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 40px 20px;
+      text-align: center;
+      color: #222;
+    }
+
+    .card {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 35px;
+      border-radius: 18px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .status {
+      margin-top: 25px;
+      padding: 15px;
+      border-radius: 10px;
+      background: #eef3f8;
+      font-weight: bold;
+    }
+  </style>
 </head>
 
 <body>
-  <h1>🎓 Graduation Tickets</h1>
-  <h2>Clark County Acceleration Academies</h2>
 
-  <p>Our digital graduation ticket system is working!</p>
+  <div class="card">
+    <h1>🎓 Graduation Tickets</h1>
+
+    <h2>Clark County Acceleration Academies</h2>
+
+    <p>
+      Digital guest ticket system for graduation.
+    </p>
+
+    <div class="status" id="firebaseStatus">
+      Connecting to Firebase...
+    </div>
+  </div>
+
+
+  <script type="module">
+
+    import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+    import { getFirestore }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+
+    const firebaseConfig = {
+
+      apiKey: "AIzaSyAk7ZT1pCcN7wFY0rHRRoCbDvHEHGBoptY",
+
+      authDomain: "graduation-tickets-1897c.firebaseapp.com",
+
+      projectId: "graduation-tickets-1897c",
+
+      storageBucket: "graduation-tickets-1897c.firebasestorage.app",
+
+      messagingSenderId: "570671585141",
+
+      appId: "1:570671585141:web:65c2c0436eead0e184e53c"
+
+    };
+
+
+    const app = initializeApp(firebaseConfig);
+
+    const db = getFirestore(app);
+
+
+    document.getElementById("firebaseStatus").innerHTML =
+      "✅ Website connected to Firebase!";
+
+    console.log("Firebase connected successfully.");
+
+  </script>
+
 </body>
 </html>
