@@ -44,6 +44,11 @@
       cursor: pointer;
     }
 
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .lookup {
       margin-top: 25px;
       padding: 20px;
@@ -97,7 +102,6 @@
     <h1>🎓 Graduation Guest Check-In</h1>
     <p>Clark County Acceleration Academies</p>
 
-
     <div id="loginBox">
 
       <h2>Staff Login</h2>
@@ -122,11 +126,9 @@
 
     </div>
 
-
     <button id="logoutBtn">
       Sign Out
     </button>
-
 
     <div class="lookup" id="lookupBox">
 
@@ -147,11 +149,9 @@
 
     </div>
 
-
     <div class="status" id="status">
       Please sign in.
     </div>
-
 
     <div class="ticket-box" id="graduateInfo">
 
@@ -183,45 +183,23 @@
 
     </div>
 
-
     <div
       class="ticket-controls"
       id="ticketControls">
 
       <h3>How many guests are entering now?</h3>
 
-      <button class="useTicketBtn" data-count="1">
-        🎟️ 1
-      </button>
-
-      <button class="useTicketBtn" data-count="2">
-        🎟️ 2
-      </button>
-
-      <button class="useTicketBtn" data-count="3">
-        🎟️ 3
-      </button>
-
-      <button class="useTicketBtn" data-count="4">
-        🎟️ 4
-      </button>
-
-      <button class="useTicketBtn" data-count="5">
-        🎟️ 5
-      </button>
-
-      <button class="useTicketBtn" data-count="6">
-        🎟️ 6
-      </button>
-
-      <button class="useTicketBtn" data-count="7">
-        🎟️ 7
-      </button>
+      <button class="useTicketBtn" data-count="1">🎟️ 1</button>
+      <button class="useTicketBtn" data-count="2">🎟️ 2</button>
+      <button class="useTicketBtn" data-count="3">🎟️ 3</button>
+      <button class="useTicketBtn" data-count="4">🎟️ 4</button>
+      <button class="useTicketBtn" data-count="5">🎟️ 5</button>
+      <button class="useTicketBtn" data-count="6">🎟️ 6</button>
+      <button class="useTicketBtn" data-count="7">🎟️ 7</button>
 
     </div>
 
   </div>
-
 
   <script type="module">
 
@@ -229,14 +207,14 @@
     from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 
     import {
-  getFirestore,
-  doc,
-  getDoc,
-  runTransaction,
-  collection,
-  serverTimestamp
-}
-from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+      getFirestore,
+      doc,
+      getDoc,
+      runTransaction,
+      collection,
+      serverTimestamp
+    }
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
     import {
       getAuth,
@@ -269,6 +247,7 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
     const auth = getAuth(app);
 
     let currentGraduateId = null;
+    let checkInInProgress = false;
 
 
     const loginBtn =
@@ -286,6 +265,9 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
     const status =
       document.getElementById("status");
 
+    const ticketButtons =
+      document.querySelectorAll(".useTicketBtn");
+
 
     loginBtn.addEventListener("click", async () => {
 
@@ -295,7 +277,8 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
       const password =
         document.getElementById("password").value;
 
-      status.textContent = "Signing in...";
+      status.textContent =
+        "Signing in...";
 
       try {
 
@@ -425,7 +408,6 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
         const graduateSnap =
           await getDoc(graduateRef);
 
-
         if (!graduateSnap.exists()) {
 
           document.getElementById("graduateInfo").style.display =
@@ -441,12 +423,17 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
         }
 
-
         const data =
           graduateSnap.data();
 
+        const allowed =
+          Number(data.ticketsAllowed);
+
+        const used =
+          Number(data.ticketsUsed);
+
         const remaining =
-          data.ticketsAllowed - data.ticketsUsed;
+          allowed - used;
 
 
         document.getElementById("graduateName").textContent =
@@ -456,10 +443,10 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
           data.studentId;
 
         document.getElementById("ticketsAllowed").textContent =
-          data.ticketsAllowed;
+          allowed;
 
         document.getElementById("ticketsUsed").textContent =
-          data.ticketsUsed;
+          used;
 
         document.getElementById("ticketsRemaining").textContent =
           remaining;
@@ -467,10 +454,6 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
         document.getElementById("graduateInfo").style.display =
           "block";
-
-
-        document.getElementById("ticketControls").style.display =
-          remaining > 0 ? "block" : "none";
 
 
         if (data.active === false) {
@@ -483,7 +466,10 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
         }
 
-        else if (remaining === 0) {
+        else if (remaining <= 0) {
+
+          document.getElementById("ticketControls").style.display =
+            "none";
 
           status.textContent =
             "🚫 All guest tickets have already been used.";
@@ -491,6 +477,9 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
         }
 
         else {
+
+          document.getElementById("ticketControls").style.display =
+            "block";
 
           status.textContent =
             "✅ Graduate found. Ready for guest check-in.";
@@ -511,12 +500,27 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
     }
 
 
+    function setTicketButtonsDisabled(disabled) {
+
+      ticketButtons.forEach((button) => {
+        button.disabled = disabled;
+      });
+
+    }
+
+
     async function useTickets(count) {
 
       if (!currentGraduateId) {
         return;
       }
 
+      if (checkInInProgress) {
+        return;
+      }
+
+      checkInInProgress = true;
+      setTicketButtonsDisabled(true);
 
       const graduateRef =
         doc(
@@ -525,8 +529,10 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
           currentGraduateId
         );
 
-
       try {
+
+        status.textContent =
+          "Processing check-in...";
 
         await runTransaction(
           db,
@@ -534,7 +540,6 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
             const graduateSnap =
               await transaction.get(graduateRef);
-
 
             if (!graduateSnap.exists()) {
 
@@ -544,10 +549,8 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
             }
 
-
             const data =
               graduateSnap.data();
-
 
             if (data.active === false) {
 
@@ -557,11 +560,14 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
             }
 
+            const allowed =
+              Number(data.ticketsAllowed);
+
+            const used =
+              Number(data.ticketsUsed);
 
             const remaining =
-              data.ticketsAllowed -
-              data.ticketsUsed;
-
+              allowed - used;
 
             if (count > remaining) {
 
@@ -571,29 +577,33 @@ from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
             }
 
+            const newUsed =
+              used + count;
 
-        transaction.update(
-  graduateRef,
-  {
-    ticketsUsed:
-      data.ticketsUsed + count
-  }
-);
+            transaction.update(
+              graduateRef,
+              {
+                ticketsUsed: newUsed
+              }
+            );
 
-const checkInRef =
-  doc(collection(db, "checkIns"));
+            const checkInRef =
+              doc(collection(db, "checkIns"));
 
-transaction.set(
-  checkInRef,
-  {
-    graduateId: currentGraduateId,
-    graduateName: data.name,
-    studentId: data.studentId,
-    guestCount: count,
-    staffEmail: auth.currentUser.email,
-    timestamp: serverTimestamp()
-  }
-);   
+            transaction.set(
+              checkInRef,
+              {
+                graduateId: currentGraduateId,
+                graduateName: data.name,
+                studentId: data.studentId,
+                guestCount: count,
+                staffEmail: auth.currentUser.email,
+                timestamp: serverTimestamp()
+              }
+            );
+
+          }
+        );
 
         await loadGraduate();
 
@@ -611,33 +621,45 @@ transaction.set(
 
       }
 
+      finally {
+
+        checkInInProgress = false;
+
+        setTicketButtonsDisabled(false);
+
+      }
+
     }
 
 
-    document
-      .querySelectorAll(".useTicketBtn")
-      .forEach((button) => {
+    ticketButtons.forEach((button) => {
 
-        button.addEventListener(
-          "click",
-          () => {
+      button.addEventListener(
+        "click",
+        async () => {
 
-            const count =
-              Number(button.dataset.count);
+          if (checkInInProgress) {
+            return;
+          }
 
-            const confirmUse =
-              confirm(
-                `Check in ${count} guest(s) for this graduate?`
-              );
+          const count =
+            Number(button.dataset.count);
 
-            if (confirmUse) {
-              useTickets(count);
-            }
+          const confirmUse =
+            confirm(
+              `Check in ${count} guest(s) for this graduate?`
+            );
+
+          if (confirmUse) {
+
+            await useTickets(count);
 
           }
-        );
 
-      });
+        }
+      );
+
+    });
 
   </script>
 
