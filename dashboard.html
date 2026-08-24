@@ -188,7 +188,7 @@
 
       <div class="summary-card">
         <div id="totalGraduates" class="summary-number">0</div>
-        <div>Graduates</div>
+        <div>Active Graduates</div>
       </div>
 
       <div class="summary-card">
@@ -505,12 +505,27 @@
         "";
 
 
+      /*
+        IMPORTANT:
+        Only ACTIVE graduates are included
+        in dashboard totals and the table.
+      */
+
+      const activeGraduates =
+        graduatesData.filter(
+          graduate =>
+            graduate.active !== false
+        );
+
+
       const claimedCodes =
         new Set(
           claimsData
             .filter(
               claim =>
                 claim.claimed === true
+                &&
+                claim.active !== false
             )
             .map(
               claim =>
@@ -525,7 +540,7 @@
 
 
       const sortedGraduates =
-        [...graduatesData]
+        [...activeGraduates]
           .sort(
             (a, b) =>
               String(a.name || "")
@@ -610,7 +625,7 @@
       document
         .getElementById("totalGraduates")
         .textContent =
-        graduatesData.length;
+        activeGraduates.length;
 
 
       document
