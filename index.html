@@ -87,6 +87,7 @@
     .status {
       margin-top: 18px;
       font-weight: bold;
+      line-height: 1.5;
     }
 
     #logoutBtn {
@@ -101,6 +102,7 @@
 
     <h1>🎓 Graduation Guest Check-In</h1>
     <p>Clark County Acceleration Academies</p>
+
 
     <div id="loginBox">
 
@@ -126,9 +128,11 @@
 
     </div>
 
+
     <button id="logoutBtn">
       Sign Out
     </button>
+
 
     <div class="lookup" id="lookupBox">
 
@@ -136,9 +140,22 @@
 
       <input
         type="text"
-        id="graduateSearch"
-        placeholder="Enter Student ID"
-        autocomplete="off"
+        id="firstName"
+        placeholder="First name"
+      >
+
+      <input
+        type="text"
+        id="lastName"
+        placeholder="Last name"
+      >
+
+      <input
+        type="text"
+        id="phoneLast4"
+        inputmode="numeric"
+        maxlength="4"
+        placeholder="Last 4 digits of phone"
       >
 
       <br>
@@ -149,17 +166,24 @@
 
     </div>
 
+
     <div class="status" id="status">
       Please sign in.
     </div>
+
 
     <div class="ticket-box" id="graduateInfo">
 
       <h2 id="graduateName"></h2>
 
       <p>
-        <strong>Student ID:</strong>
-        <span id="studentId"></span>
+        <strong>Campus:</strong>
+        <span id="campus"></span>
+      </p>
+
+      <p>
+        <strong>Phone Last 4:</strong>
+        <span id="displayPhone"></span>
       </p>
 
       <p>
@@ -183,6 +207,7 @@
 
     </div>
 
+
     <div
       class="ticket-controls"
       id="ticketControls">
@@ -201,6 +226,7 @@
 
   </div>
 
+
   <script type="module">
 
     import { initializeApp }
@@ -208,10 +234,11 @@
 
     import {
       getFirestore,
-      doc,
-      getDoc,
-      runTransaction,
       collection,
+      getDocs,
+      query,
+      runTransaction,
+      doc,
       serverTimestamp
     }
     from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
@@ -243,8 +270,11 @@
 
 
     const app = initializeApp(firebaseConfig);
+
     const db = getFirestore(app);
+
     const auth = getAuth(app);
+
 
     let currentGraduateId = null;
     let checkInInProgress = false;
@@ -259,9 +289,6 @@
     const searchBtn =
       document.getElementById("searchBtn");
 
-    const searchInput =
-      document.getElementById("graduateSearch");
-
     const status =
       document.getElementById("status");
 
@@ -269,24 +296,293 @@
       document.querySelectorAll(".useTicketBtn");
 
 
-    loginBtn.addEventListener("click", async () => {
+    function normalizeName(value) {
 
-      const email =
-        document.getElementById("email").value.trim();
+      return value
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
 
-      const password =
-        document.getElementById("password").value;
+    }
+
+
+    function cleanLast4(value) {
+
+      return value
+        .replace(/\D/g, "")
+        .slice(0, 4);
+
+    }
+
+
+    loginBtn.addEventListener(
+      "click",
+      async () => {
+
+        const email =
+          document
+            .getElementById("email")
+            .value
+            .trim();
+
+        const password =
+          document
+            .getElementById("password")
+            .value;
+
+        status.textContent =
+          "Signing in...";
+
+        try {
+
+          await signInWithEmailAndPassword(
+            auth,
+            email,
+            password
+          );
+
+        }
+
+        catch (error) {
+
+          console.error(error);
+
+          status.textContent =
+            "❌ Unable to sign in. Check your email and password.";
+
+        }
+
+      }
+    );
+
+
+    logoutBtn.addEventListener(
+      "click",
+      async () => {
+
+        await signOut(auth);
+
+      }
+    );
+
+
+    onAuthStateChanged(
+      auth,
+      user => {
+
+        if (user) {
+
+          document
+            .getElementById("loginBox")
+            .style.display =
+            "none";
+
+          logoutBtn.style.display =
+            "inline-block";
+
+          document
+            .getElementById("lookupBox")
+            .style.display =
+            "block";
+
+          status.textContent =
+            "✅ Signed in. Enter the graduate's information.";
+
+        }
+
+        else {
+
+          currentGraduateId = null;
+
+          document
+            .getElementById("loginBox")
+            .style.display =
+            "block";
+
+          logoutBtn.style.display =
+            "none";
+
+          document
+            .getElementById("lookupBox")
+            .style.display =
+            "none";
+
+          document
+            .getElementById("graduateInfo")
+            .style.display =
+            "none";
+
+          document
+            .getElementById("ticketControls")
+            .style.display =
+            "none";
+
+          status.textContent =
+            "Please sign in.";
+
+        }
+
+      }
+    );
+
+
+    document
+      .getElementById("phoneLast4")
+      .addEventListener(
+        "input",
+        event => {
+
+          event.target.value =
+            cleanLast4(
+              event.target.value
+            );
+
+        }
+      );
+
+
+    searchBtn.addEventListener(
+      "click",
+      searchGraduate
+    );
+
+
+    async function searchGraduate() {
+
+      const firstName =
+        normalizeName(
+          document
+            .getElementById("firstName")
+            .value
+        );
+
+      const lastName =
+        normalizeName(
+          document
+            .getElementById("lastName")
+            .value
+        );
+
+      const phoneLast4 =
+        cleanLast4(
+          document
+            .getElementById("phoneLast4")
+            .value
+        );
+
+
+      if (
+        !firstName ||
+        !lastName
+      ) {
+
+        status.textContent =
+          "❌ Enter first and last name.";
+
+        return;
+
+      }
+
+
+      if (
+        phoneLast4.length !== 4
+      ) {
+
+        status.textContent =
+          "❌ Enter the last 4 digits of the phone number.";
+
+        return;
+
+      }
+
 
       status.textContent =
-        "Signing in...";
+        "Searching...";
+
 
       try {
 
-        await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        const snapshot =
+          await getDocs(
+            query(
+              collection(
+                db,
+                "graduates"
+              )
+            )
+          );
+
+
+        const matches =
+          snapshot.docs.filter(
+            docSnap => {
+
+              const data =
+                docSnap.data();
+
+              return (
+                normalizeName(
+                  data.firstName || ""
+                ) === firstName
+                &&
+                normalizeName(
+                  data.lastName || ""
+                ) === lastName
+                &&
+                String(
+                  data.phoneLast4 || ""
+                ) === phoneLast4
+              );
+
+            }
+          );
+
+
+        if (
+          matches.length === 0
+        ) {
+
+          currentGraduateId =
+            null;
+
+          document
+            .getElementById("graduateInfo")
+            .style.display =
+            "none";
+
+          document
+            .getElementById("ticketControls")
+            .style.display =
+            "none";
+
+          status.textContent =
+            "❌ Graduate not found. Check the name and last 4 digits of the phone number.";
+
+          return;
+
+        }
+
+
+        if (
+          matches.length > 1
+        ) {
+
+          currentGraduateId =
+            null;
+
+          status.textContent =
+            "❌ More than one graduate matched. Please use the Manage Graduates page for assistance.";
+
+          return;
+
+        }
+
+
+        currentGraduateId =
+          matches[0].id;
+
+
+        await loadGraduate();
 
       }
 
@@ -295,97 +591,9 @@
         console.error(error);
 
         status.textContent =
-          "❌ Unable to sign in. Check your email and password.";
+          "❌ Could not search for graduate.";
 
       }
-
-    });
-
-
-    logoutBtn.addEventListener("click", async () => {
-
-      await signOut(auth);
-
-    });
-
-
-    onAuthStateChanged(auth, (user) => {
-
-      if (user) {
-
-        document.getElementById("loginBox").style.display =
-          "none";
-
-        logoutBtn.style.display =
-          "inline-block";
-
-        document.getElementById("lookupBox").style.display =
-          "block";
-
-        status.textContent =
-          "✅ Signed in. Enter a Student ID.";
-
-      }
-
-      else {
-
-        currentGraduateId = null;
-
-        document.getElementById("loginBox").style.display =
-          "block";
-
-        logoutBtn.style.display =
-          "none";
-
-        document.getElementById("lookupBox").style.display =
-          "none";
-
-        document.getElementById("graduateInfo").style.display =
-          "none";
-
-        document.getElementById("ticketControls").style.display =
-          "none";
-
-        status.textContent =
-          "Please sign in.";
-
-      }
-
-    });
-
-
-    searchBtn.addEventListener("click", searchGraduate);
-
-
-    searchInput.addEventListener("keydown", (event) => {
-
-      if (event.key === "Enter") {
-        searchGraduate();
-      }
-
-    });
-
-
-    async function searchGraduate() {
-
-      const enteredId =
-        searchInput.value.trim().toUpperCase();
-
-      if (!enteredId) {
-
-        status.textContent =
-          "❌ Enter a Student ID.";
-
-        return;
-
-      }
-
-      currentGraduateId = enteredId;
-
-      status.textContent =
-        "Searching...";
-
-      await loadGraduate();
 
     }
 
@@ -396,7 +604,179 @@
         return;
       }
 
+
+      const snapshot =
+        await getDocs(
+          collection(
+            db,
+            "graduates"
+          )
+        );
+
+
+      const graduateSnap =
+        snapshot.docs.find(
+          item =>
+            item.id === currentGraduateId
+        );
+
+
+      if (!graduateSnap) {
+
+        status.textContent =
+          "❌ Graduate not found.";
+
+        return;
+
+      }
+
+
+      const data =
+        graduateSnap.data();
+
+
+      const allowed =
+        Number(
+          data.ticketsAllowed || 0
+        );
+
+      const used =
+        Number(
+          data.ticketsUsed || 0
+        );
+
+      const remaining =
+        allowed - used;
+
+
+      document
+        .getElementById("graduateName")
+        .textContent =
+        data.name;
+
+
+      document
+        .getElementById("campus")
+        .textContent =
+        data.campus || "—";
+
+
+      document
+        .getElementById("displayPhone")
+        .textContent =
+        data.phoneLast4 || "—";
+
+
+      document
+        .getElementById("ticketsAllowed")
+        .textContent =
+        allowed;
+
+
+      document
+        .getElementById("ticketsUsed")
+        .textContent =
+        used;
+
+
+      document
+        .getElementById("ticketsRemaining")
+        .textContent =
+        remaining;
+
+
+      document
+        .getElementById("graduateInfo")
+        .style.display =
+        "block";
+
+
+      if (
+        data.active === false
+      ) {
+
+        document
+          .getElementById("ticketControls")
+          .style.display =
+          "none";
+
+        status.textContent =
+          "🚫 This graduate's tickets are inactive.";
+
+      }
+
+      else if (
+        remaining <= 0
+      ) {
+
+        document
+          .getElementById("ticketControls")
+          .style.display =
+          "none";
+
+        status.textContent =
+          "🚫 All guest tickets have already been used.";
+
+      }
+
+      else {
+
+        document
+          .getElementById("ticketControls")
+          .style.display =
+          "block";
+
+        status.textContent =
+          "✅ Graduate found. Ready for guest check-in.";
+
+      }
+
+    }
+
+
+    function setTicketButtonsDisabled(
+      disabled
+    ) {
+
+      ticketButtons.forEach(
+        button => {
+
+          button.disabled =
+            disabled;
+
+        }
+      );
+
+    }
+
+
+    async function useTickets(
+      count
+    ) {
+
+      if (
+        !currentGraduateId ||
+        checkInInProgress
+      ) {
+
+        return;
+
+      }
+
+
+      checkInInProgress =
+        true;
+
+      setTicketButtonsDisabled(
+        true
+      );
+
+
       try {
+
+        status.textContent =
+          "Processing check-in...";
+
 
         const graduateRef =
           doc(
@@ -405,143 +785,20 @@
             currentGraduateId
           );
 
-        const graduateSnap =
-          await getDoc(graduateRef);
-
-        if (!graduateSnap.exists()) {
-
-          document.getElementById("graduateInfo").style.display =
-            "none";
-
-          document.getElementById("ticketControls").style.display =
-            "none";
-
-          status.textContent =
-            "❌ Graduate not found. Check the Student ID.";
-
-          return;
-
-        }
-
-        const data =
-          graduateSnap.data();
-
-        const allowed =
-          Number(data.ticketsAllowed);
-
-        const used =
-          Number(data.ticketsUsed);
-
-        const remaining =
-          allowed - used;
-
-
-        document.getElementById("graduateName").textContent =
-          data.name;
-
-        document.getElementById("studentId").textContent =
-          data.studentID;
-
-        document.getElementById("ticketsAllowed").textContent =
-          allowed;
-
-        document.getElementById("ticketsUsed").textContent =
-          used;
-
-        document.getElementById("ticketsRemaining").textContent =
-          remaining;
-
-
-        document.getElementById("graduateInfo").style.display =
-          "block";
-
-
-        if (data.active === false) {
-
-          document.getElementById("ticketControls").style.display =
-            "none";
-
-          status.textContent =
-            "🚫 This graduate's tickets are inactive.";
-
-        }
-
-        else if (remaining <= 0) {
-
-          document.getElementById("ticketControls").style.display =
-            "none";
-
-          status.textContent =
-            "🚫 All guest tickets have already been used.";
-
-        }
-
-        else {
-
-          document.getElementById("ticketControls").style.display =
-            "block";
-
-          status.textContent =
-            "✅ Graduate found. Ready for guest check-in.";
-
-        }
-
-      }
-
-      catch (error) {
-
-        console.error(error);
-
-        status.textContent =
-          "❌ Could not load graduate.";
-
-      }
-
-    }
-
-
-    function setTicketButtonsDisabled(disabled) {
-
-      ticketButtons.forEach((button) => {
-        button.disabled = disabled;
-      });
-
-    }
-
-
-    async function useTickets(count) {
-
-      if (!currentGraduateId) {
-        return;
-      }
-
-      if (checkInInProgress) {
-        return;
-      }
-
-      checkInInProgress = true;
-      setTicketButtonsDisabled(true);
-
-      const graduateRef =
-        doc(
-          db,
-          "graduates",
-          currentGraduateId
-        );
-
-      try {
-
-        status.textContent =
-          "Processing check-in...";
 
         await runTransaction(
           db,
-          async (transaction) => {
+          async transaction => {
 
             const graduateSnap =
-              await transaction.get(graduateRef);
+              await transaction.get(
+                graduateRef
+              );
 
-            if (!graduateSnap.exists()) {
+
+            if (
+              !graduateSnap.exists()
+            ) {
 
               throw new Error(
                 "Graduate not found."
@@ -549,10 +806,14 @@
 
             }
 
+
             const data =
               graduateSnap.data();
 
-            if (data.active === false) {
+
+            if (
+              data.active === false
+            ) {
 
               throw new Error(
                 "These tickets are inactive."
@@ -560,16 +821,26 @@
 
             }
 
+
             const allowed =
-              Number(data.ticketsAllowed);
+              Number(
+                data.ticketsAllowed || 0
+              );
+
 
             const used =
-              Number(data.ticketsUsed);
+              Number(
+                data.ticketsUsed || 0
+              );
+
 
             const remaining =
               allowed - used;
 
-            if (count > remaining) {
+
+            if (
+              count > remaining
+            ) {
 
               throw new Error(
                 `Only ${remaining} ticket(s) remain.`
@@ -577,13 +848,17 @@
 
             }
 
-            if (!data.publicTicketCode) {
+
+            if (
+              !data.publicTicketCode
+            ) {
 
               throw new Error(
-                "This graduate does not have a public ticket code."
+                "Public ticket code is missing."
               );
 
             }
+
 
             const publicTicketRef =
               doc(
@@ -592,16 +867,23 @@
                 data.publicTicketCode
               );
 
-            const publicTicketSnap =
-              await transaction.get(publicTicketRef);
 
-            if (!publicTicketSnap.exists()) {
+            const publicTicketSnap =
+              await transaction.get(
+                publicTicketRef
+              );
+
+
+            if (
+              !publicTicketSnap.exists()
+            ) {
 
               throw new Error(
                 "Public ticket record not found."
               );
 
             }
+
 
             const newUsed =
               used + count;
@@ -610,7 +892,8 @@
             transaction.update(
               graduateRef,
               {
-                ticketsUsed: newUsed
+                ticketsUsed:
+                  newUsed
               }
             );
 
@@ -618,30 +901,53 @@
             transaction.update(
               publicTicketRef,
               {
-                ticketsUsed: newUsed
+                ticketsUsed:
+                  newUsed
               }
             );
 
 
             const checkInRef =
-              doc(collection(db, "checkIns"));
+              doc(
+                collection(
+                  db,
+                  "checkIns"
+                )
+              );
+
 
             transaction.set(
               checkInRef,
               {
-                graduateId: currentGraduateId,
-                graduateName: data.name,
-                studentId: data.studentID,
-                guestCount: count,
-                staffEmail: auth.currentUser.email,
-                timestamp: serverTimestamp()
+                graduateId:
+                  currentGraduateId,
+
+                graduateName:
+                  data.name,
+
+                studentId:
+                  data.studentID || "",
+
+                guestCount:
+                  count,
+
+                eventType:
+                  "guest-check-in",
+
+                staffEmail:
+                  auth.currentUser.email,
+
+                timestamp:
+                  serverTimestamp()
               }
             );
 
           }
         );
 
+
         await loadGraduate();
+
 
         status.textContent =
           `✅ ${count} guest(s) checked in successfully.`;
@@ -653,49 +959,69 @@
         console.error(error);
 
         status.textContent =
-          "❌ " + error.message;
+          "❌ " +
+          error.message;
 
       }
 
       finally {
 
-        checkInInProgress = false;
+        checkInInProgress =
+          false;
 
-        setTicketButtonsDisabled(false);
+        setTicketButtonsDisabled(
+          false
+        );
 
       }
 
     }
 
 
-    ticketButtons.forEach((button) => {
+    ticketButtons.forEach(
+      button => {
 
-      button.addEventListener(
-        "click",
-        async () => {
+        button.addEventListener(
+          "click",
 
-          if (checkInInProgress) {
-            return;
+          async () => {
+
+            if (
+              checkInInProgress
+            ) {
+
+              return;
+
+            }
+
+
+            const count =
+              Number(
+                button.dataset.count
+              );
+
+
+            const confirmUse =
+              confirm(
+                `Check in ${count} guest(s) for this graduate?`
+              );
+
+
+            if (
+              confirmUse
+            ) {
+
+              await useTickets(
+                count
+              );
+
+            }
+
           }
+        );
 
-          const count =
-            Number(button.dataset.count);
-
-          const confirmUse =
-            confirm(
-              `Check in ${count} guest(s) for this graduate?`
-            );
-
-          if (confirmUse) {
-
-            await useTickets(count);
-
-          }
-
-        }
-      );
-
-    });
+      }
+    );
 
   </script>
 
