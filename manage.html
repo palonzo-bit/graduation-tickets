@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Manage Graduation Tickets</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 25px 15px;
+      color: #222;
+    }
+
+    .container {
+      max-width: 950px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 18px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    h1,
+    h2 {
+      text-align: center;
+    }
+
+    .subtitle {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      margin: 7px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 11px 16px;
+      margin: 6px 4px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .full-button {
+      width: 100%;
+      margin-left: 0;
+      margin-right: 0;
+    }
+
+    #logoutBtn {
+      display: none;
+    }
+
+    .status {
+      text-align: center;
+      font-weight: bold;
+      margin: 15px 0;
+      line-height: 1.5;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .add-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .result {
+      background: #eef3f8;
+      border-radius: 14px;
+      padding: 18px;
+      margin: 12px 0;
+    }
+
+    .result-name {
+      font-size: 21px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 15px 0;
+    }
+
+    .stat {
+      background: white;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .claimed {
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    .inactive {
+      background: #fdecec;
+    }
+
+    .success-box {
+      background: #eef8ee;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+    }
+
+    .warning {
+      background: #fff6d9;
+      padding: 14px;
+      border-radius: 10px;
+      line-height: 1.5;
+      margin-bottom: 15px;
+    }
+
+    @media (max-width: 650px) {
+
+      .add-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="card">
+
+    <h1>🎓 Manage Graduation Tickets</h1>
+
+    <div class="subtitle">
+      Clark County Acceleration Academies
+    </div>
+
+
+    <div id="loginSection">
+
+      <h2>Staff Login</h2>
+
+      <input
+        id="email"
+        type="email"
+        placeholder="Staff email"
+      >
+
+      <input
+        id="password"
+        type="password"
+        placeholder="Password"
+      >
+
+      <button
+        id="loginBtn"
+        class="full-button">
+        Sign In
+      </button>
+
+    </div>
+
+
+    <div style="text-align:center;">
+
+      <button id="logoutBtn">
+        Sign Out
+      </button>
+
+    </div>
+
+
+    <div
+      id="status"
+      class="status">
+      Please sign in.
+    </div>
+
+  </div>
+
+
+  <div
+    id="manageSection"
+    class="hidden">
+
+
+    <!-- ADD GRADUATE -->
+
+    <div class="card">
+
+      <h2>➕ Add Graduate</h2>
+
+      <div class="warning">
+        Use this for a graduate who was added after the original bulk import.
+        The system will automatically create their mobile ticket and claim record.
+      </div>
+
+
+      <div class="add-grid">
+
+        <div>
+          <label>First Name</label>
+
+          <input
+            id="addFirstName"
+            type="text"
+            placeholder="First name"
+          >
+        </div>
+
+
+        <div>
+          <label>Last Name</label>
+
+          <input
+            id="addLastName"
+            type="text"
+            placeholder="Last name"
+          >
+        </div>
+
+
+        <div>
+          <label>Campus</label>
+
+          <select id="addCampus">
+
+            <option value="">
+              Select campus
+            </option>
+
+            <option value="East">
+              East
+            </option>
+
+            <option value="North">
+              North
+            </option>
+
+            <option value="SE">
+              Southeast
+            </option>
+
+            <option value="Hope">
+              Hope
+            </option>
+
+          </select>
+        </div>
+
+
+        <div>
+          <label>
+            Last 4 Digits of Phone
+          </label>
+
+          <input
+            id="addPhoneLast4"
+            type="text"
+            inputmode="numeric"
+            maxlength="4"
+            placeholder="1234"
+          >
+        </div>
+
+
+        <div>
+          <label>
+            Student ID (optional)
+          </label>
+
+          <input
+            id="addStudentID"
+            type="text"
+            placeholder="Optional"
+          >
+        </div>
+
+
+        <div>
+          <label>
+            Guest Tickets
+          </label>
+
+          <input
+            id="addTicketsAllowed"
+            type="number"
+            min="0"
+            max="20"
+            value="7"
+          >
+        </div>
+
+      </div>
+
+
+      <button
+        id="addGraduateBtn"
+        class="full-button">
+
+        ➕ Add Graduate & Create Tickets
+
+      </button>
+
+
+      <div
+        id="addResult"
+        class="hidden">
+      </div>
+
+    </div>
+
+
+
+    <!-- SEARCH -->
+
+    <div class="card">
+
+      <h2>🔎 Find Graduate</h2>
+
+      <input
+        id="searchInput"
+        type="text"
+        placeholder="Search by graduate name"
+      >
+
+
+      <div id="searchResults">
+      </div>
+
+    </div>
+
+
+  </div>
+
+</div>
+
+
+<script type="module">
+
+  import { initializeApp }
+  from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+
+  import {
+
+    getFirestore,
+    collection,
+    onSnapshot,
+    doc,
+    getDoc,
+    writeBatch,
+    updateDoc
+
+  }
+  from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+
+  import {
+
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+
+  }
+  from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
+
+
+  const firebaseConfig = {
+
+    apiKey:
+      "AIzaSyAk7ZT1pCcN7wFY0rHRRoCbDvHEHGBoptY",
+
+    authDomain:
+      "graduation-tickets-1897c.firebaseapp.com",
+
+    projectId:
+      "graduation-tickets-1897c",
+
+    storageBucket:
+      "graduation-tickets-1897c.firebasestorage.app",
+
+    messagingSenderId:
+      "570671585141",
+
+    appId:
+      "1:570671585141:web:65c2c0436eead0e184e53c"
+
+  };
+
+
+  const app =
+    initializeApp(firebaseConfig);
+
+  const db =
+    getFirestore(app);
+
+  const auth =
+    getAuth(app);
+
+
+
+  const loginSection =
+    document.getElementById("loginSection");
+
+  const loginBtn =
+    document.getElementById("loginBtn");
+
+  const logoutBtn =
+    document.getElementById("logoutBtn");
+
+  const status =
+    document.getElementById("status");
+
+  const manageSection =
+    document.getElementById("manageSection");
+
+  const searchInput =
+    document.getElementById("searchInput");
+
+  const searchResults =
+    document.getElementById("searchResults");
+
+  const addGraduateBtn =
+    document.getElementById("addGraduateBtn");
+
+  const addResult =
+    document.getElementById("addResult");
+
+
+  let graduates =
+    [];
+
+  let unsubscribeGraduates =
+    null;
+
+
+
+  /* ------------------------
+     LOGIN
+  ------------------------- */
+
+
+  loginBtn.addEventListener(
+    "click",
+
+    async () => {
+
+      const email =
+        document
+          .getElementById("email")
+          .value
+          .trim();
+
+      const password =
+        document
+          .getElementById("password")
+          .value;
+
+
+      status.textContent =
+        "Signing in...";
+
+
+      try {
+
+        await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+          "❌ Unable to sign in.";
+
+      }
+
+    }
+  );
+
+
+
+  logoutBtn.addEventListener(
+    "click",
+
+    async () => {
+
+      await signOut(auth);
+
+    }
+  );
+
+
+
+  onAuthStateChanged(
+    auth,
+
+    user => {
+
+      if (user) {
+
+        loginSection.style.display =
+          "none";
+
+        logoutBtn.style.display =
+          "inline-block";
+
+        manageSection.classList.remove(
+          "hidden"
+        );
+
+        status.textContent =
+          "✅ Staff management connected.";
+
+        startGraduateListener();
+
+      }
+
+      else {
+
+        if (unsubscribeGraduates) {
+
+          unsubscribeGraduates();
+
+          unsubscribeGraduates =
+            null;
+
+        }
+
+        graduates =
+          [];
+
+        loginSection.style.display =
+          "block";
+
+        logoutBtn.style.display =
+          "none";
+
+        manageSection.classList.add(
+          "hidden"
+        );
+
+        status.textContent =
+          "Please sign in.";
+
+      }
+
+    }
+  );
+
+
+
+  /* ------------------------
+     LIVE GRADUATE LIST
+  ------------------------- */
+
+
+  function startGraduateListener() {
+
+    if (unsubscribeGraduates) {
+
+      unsubscribeGraduates();
+
+    }
+
+
+    unsubscribeGraduates =
+      onSnapshot(
+
+        collection(
+          db,
+          "graduates"
+        ),
+
+        snapshot => {
+
+          graduates =
+            snapshot.docs.map(
+
+              docSnap => ({
+
+                id:
+                  docSnap.id,
+
+                ...docSnap.data()
+
+              })
+
+            );
+
+
+          renderSearch();
+
+        },
+
+        error => {
+
+          console.error(error);
+
+          status.textContent =
+            "❌ Could not load graduates.";
+
+        }
+
+      );
+
+  }
+
+
+
+  /* ------------------------
+     HELPERS
+  ------------------------- */
+
+
+  function normalizeName(value) {
+
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+
+  }
+
+
+
+  function cleanLast4(value) {
+
+    return value
+      .replace(/\D/g, "")
+      .slice(0, 4);
+
+  }
+
+
+
+  async function sha256(text) {
+
+    const encoder =
+      new TextEncoder();
+
+    const data =
+      encoder.encode(text);
+
+    const digest =
+      await crypto.subtle.digest(
+        "SHA-256",
+        data
+      );
+
+
+    return Array
+      .from(
+        new Uint8Array(digest)
+      )
+      .map(
+        byte =>
+          byte
+            .toString(16)
+            .padStart(2, "0")
+      )
+      .join("");
+
+  }
+
+
+
+  function randomHex(length) {
+
+    const bytes =
+      new Uint8Array(
+        Math.ceil(length / 2)
+      );
+
+
+    crypto
+      .getRandomValues(bytes);
+
+
+    return Array
+      .from(bytes)
+      .map(
+        byte =>
+          byte
+            .toString(16)
+            .padStart(2, "0")
+      )
+      .join("")
+      .slice(0, length)
+      .toUpperCase();
+
+  }
+
+
+
+  /* ------------------------
+     ADD GRADUATE
+  ------------------------- */
+
+
+  addGraduateBtn.addEventListener(
+    "click",
+    addGraduate
+  );
+
+
+
+  document
+    .getElementById(
+      "addPhoneLast4"
+    )
+    .addEventListener(
+
+      "input",
+
+      event => {
+
+        event.target.value =
+          cleanLast4(
+            event.target.value
+          );
+
+      }
+
+    );
+
+
+
+  async function addGraduate() {
+
+    addResult.classList.add(
+      "hidden"
+    );
+
+
+    const firstName =
+      document
+        .getElementById(
+          "addFirstName"
+        )
+        .value
+        .trim();
+
+
+    const lastName =
+      document
+        .getElementById(
+          "addLastName"
+        )
+        .value
+        .trim();
+
+
+    const campus =
+      document
+        .getElementById(
+          "addCampus"
+        )
+        .value;
+
+
+    const phoneLast4 =
+      cleanLast4(
+        document
+          .getElementById(
+            "addPhoneLast4"
+          )
+          .value
+      );
+
+
+    const studentID =
+      document
+        .getElementById(
+          "addStudentID"
+        )
+        .value
+        .trim();
+
+
+    const ticketsAllowed =
+      Number(
+        document
+          .getElementById(
+            "addTicketsAllowed"
+          )
+          .value
+      );
+
+
+
+    if (
+      !firstName ||
+      !lastName
+    ) {
+
+      status.textContent =
+        "❌ Enter first and last name.";
+
+      return;
+
+    }
+
+
+
+    if (
+      phoneLast4.length !== 4
+    ) {
+
+      status.textContent =
+        "❌ Enter the last 4 digits of the phone number.";
+
+      return;
+
+    }
+
+
+
+    if (
+      !Number.isInteger(
+        ticketsAllowed
+      )
+      ||
+      ticketsAllowed < 0
+    ) {
+
+      status.textContent =
+        "❌ Enter a valid ticket allowance.";
+
+      return;
+
+    }
+
+
+
+    const lookupText =
+      `${normalizeName(firstName)}|${normalizeName(lastName)}|${phoneLast4}`;
+
+
+    const claimId =
+      await sha256(
+        lookupText
+      );
+
+
+
+    /*
+      Check whether this exact
+      name + phone combination
+      already exists.
+    */
+
+
+    const existingClaim =
+      await getDoc(
+
+        doc(
+          db,
+          "ticketClaims",
+          claimId
+        )
+
+      );
+
+
+
+    if (
+      existingClaim.exists()
+    ) {
+
+      status.textContent =
+        "❌ A graduate with this name and phone last 4 already exists.";
+
+      return;
+
+    }
+
+
+
+    const graduateId =
+      "GC-" +
+      randomHex(16);
+
+
+    const publicTicketCode =
+      "GT-" +
+      randomHex(20);
+
+
+    const fullName =
+      `${firstName} ${lastName}`;
+
+
+    const confirmed =
+      confirm(
+        `Add ${fullName} with ${ticketsAllowed} guest tickets?`
+      );
+
+
+    if (!confirmed) {
+
+      return;
+
+    }
+
+
+
+    addGraduateBtn.disabled =
+      true;
+
+
+    status.textContent =
+      "Creating graduate tickets...";
+
+
+
+    try {
+
+      const batch =
+        writeBatch(db);
+
+
+
+      const graduateRef =
+        doc(
+          db,
+          "graduates",
+          graduateId
+        );
+
+
+      const publicTicketRef =
+        doc(
+          db,
+          "publicTickets",
+          publicTicketCode
+        );
+
+
+      const claimRef =
+        doc(
+          db,
+          "ticketClaims",
+          claimId
+        );
+
+
+
+      batch.set(
+
+        graduateRef,
+
+        {
+
+          name:
+            fullName,
+
+          firstName:
+            firstName,
+
+          lastName:
+            lastName,
+
+          campus:
+            campus,
+
+          studentID:
+            studentID,
+
+          phoneLast4:
+            phoneLast4,
+
+          ticketsAllowed:
+            ticketsAllowed,
+
+          ticketsUsed:
+            0,
+
+          publicTicketCode:
+            publicTicketCode,
+
+          active:
+            true
+
+        }
+
+      );
+
+
+
+      batch.set(
+
+        publicTicketRef,
+
+        {
+
+          graduateName:
+            fullName,
+
+          ticketsAllowed:
+            ticketsAllowed,
+
+          ticketsUsed:
+            0,
+
+          active:
+            true
+
+        }
+
+      );
+
+
+
+      batch.set(
+
+        claimRef,
+
+        {
+
+          graduateName:
+            fullName,
+
+          publicTicketCode:
+            publicTicketCode,
+
+          claimed:
+            false,
+
+          active:
+            true
+
+        }
+
+      );
+
+
+
+      await batch.commit();
+
+
+
+      addResult.className =
+        "success-box";
+
+
+      addResult.innerHTML =
+        `
+          <strong>🎉 Graduate added!</strong>
+          <br><br>
+          ${fullName}
+          <br>
+          ${ticketsAllowed} guest tickets
+          <br><br>
+          They can now use the regular
+          graduation ticket claim QR code.
+        `;
+
+
+      addResult.classList.remove(
+        "hidden"
+      );
+
+
+      status.textContent =
+        "✅ Graduate and tickets created successfully.";
+
+
+
+      document
+        .getElementById(
+          "addFirstName"
+        )
+        .value =
+        "";
+
+
+      document
+        .getElementById(
+          "addLastName"
+        )
+        .value =
+        "";
+
+
+      document
+        .getElementById(
+          "addCampus"
+        )
+        .value =
+        "";
+
+
+      document
+        .getElementById(
+          "addPhoneLast4"
+        )
+        .value =
+        "";
+
+
+      document
+        .getElementById(
+          "addStudentID"
+        )
+        .value =
+        "";
+
+
+      document
+        .getElementById(
+          "addTicketsAllowed"
+        )
+        .value =
+        "7";
+
+    }
+
+    catch (error) {
+
+      console.error(error);
+
+      status.textContent =
+        "❌ " + error.message;
+
+    }
+
+    finally {
+
+      addGraduateBtn.disabled =
+        false;
+
+    }
+
+  }
+
+
+
+  /* ------------------------
+     SEARCH
+  ------------------------- */
+
+
+  searchInput.addEventListener(
+    "input",
+    renderSearch
+  );
+
+
+
+  function renderSearch() {
+
+    const search =
+      normalizeName(
+        searchInput.value
+      );
+
+
+    searchResults.innerHTML =
+      "";
+
+
+    if (!search) {
+
+      searchResults.innerHTML =
+        `
+          <div class="status">
+            Start typing a graduate name.
+          </div>
+        `;
+
+      return;
+
+    }
+
+
+
+    const matches =
+      graduates
+
+        .filter(
+          graduate =>
+
+            normalizeName(
+              graduate.name || ""
+            )
+            .includes(search)
+
+        )
+
+        .sort(
+          (a, b) =>
+
+            String(
+              a.name || ""
+            )
+            .localeCompare(
+              String(
+                b.name || ""
+              )
+            )
+
+        )
+
+        .slice(
+          0,
+          25
+        );
+
+
+
+    if (
+      matches.length === 0
+    ) {
+
+      searchResults.innerHTML =
+        `
+          <div class="status">
+            No graduate found.
+          </div>
+        `;
+
+      return;
+
+    }
+
+
+
+    matches.forEach(
+      graduate => {
+
+        createGraduateCard(
+          graduate
+        );
+
+      }
+    );
+
+  }
+
+
+
+  async function createGraduateCard(
+    graduate
+  ) {
+
+    const allowed =
+      Number(
+        graduate.ticketsAllowed || 0
+      );
+
+
+    const used =
+      Number(
+        graduate.ticketsUsed || 0
+      );
+
+
+    const remaining =
+      allowed - used;
+
+
+
+    let claimed =
+      false;
+
+
+
+    try {
+
+      if (
+        graduate.firstName &&
+        graduate.lastName &&
+        graduate.phoneLast4
+      ) {
+
+        const lookupText =
+          `${normalizeName(graduate.firstName)}|${normalizeName(graduate.lastName)}|${graduate.phoneLast4}`;
+
+
+        const claimId =
+          await sha256(
+            lookupText
+          );
+
+
+        const claimSnap =
+          await getDoc(
+
+            doc(
+              db,
+              "ticketClaims",
+              claimId
+            )
+
+          );
+
+
+        if (
+          claimSnap.exists()
+        ) {
+
+          claimed =
+            claimSnap.data()
+              .claimed === true;
+
+        }
+
+      }
+
+    }
+
+    catch (error) {
+
+      console.error(error);
+
+    }
+
+
+
+    const result =
+      document.createElement(
+        "div"
+      );
+
+
+    result.className =
+      graduate.active === false
+        ? "result inactive"
+        : "result";
+
+
+
+    const ticketUrl =
+      `ticket.html?code=${encodeURIComponent(
+        graduate.publicTicketCode
+      )}`;
+
+
+
+    result.innerHTML =
+      `
+
+        <div class="result-name">
+          ${graduate.name || ""}
+        </div>
+
+        <div>
+          <strong>Campus:</strong>
+          ${graduate.campus || "—"}
+        </div>
+
+        <div>
+          <strong>Phone Last 4:</strong>
+          ${graduate.phoneLast4 || "—"}
+        </div>
+
+        <div>
+          <strong>Status:</strong>
+          ${
+            graduate.active === false
+              ? "🚫 Inactive"
+              : "✅ Active"
+          }
+        </div>
+
+        <div class="claimed">
+          ${
+            claimed
+              ? "✅ Tickets Claimed"
+              : "❌ Not Yet Claimed"
+          }
+        </div>
+
+
+        <div class="stats">
+
+          <div class="stat">
+
+            <div class="stat-number">
+              ${allowed}
+            </div>
+
+            <div>
+              Allowed
+            </div>
+
+          </div>
+
+
+          <div class="stat">
+
+            <div class="stat-number">
+              ${used}
+            </div>
+
+            <div>
+              Used
+            </div>
+
+          </div>
+
+
+          <div class="stat">
+
+            <div class="stat-number">
+              ${remaining}
+            </div>
+
+            <div>
+              Remaining
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <button
+          class="open-ticket"
+          data-url="${ticketUrl}">
+
+          🔗 Open Mobile Ticket
+
+        </button>
+
+
+        <button
+          class="toggle-active"
+          data-id="${graduate.id}"
+          data-code="${graduate.publicTicketCode}"
+          data-active="${graduate.active !== false}">
+
+          ${
+            graduate.active === false
+              ? "✅ Reactivate"
+              : "⛔ Deactivate"
+          }
+
+        </button>
+
+      `;
+
+
+
+    searchResults
+      .appendChild(result);
+
+
+
+    result
+      .querySelector(
+        ".open-ticket"
+      )
+      .addEventListener(
+
+        "click",
+
+        event => {
+
+          window.open(
+            event.currentTarget
+              .dataset
+              .url,
+            "_blank"
+          );
+
+        }
+
+      );
+
+
+
+    result
+      .querySelector(
+        ".toggle-active"
+      )
+      .addEventListener(
+
+        "click",
+
+        async event => {
+
+          const button =
+            event.currentTarget;
+
+
+          const graduateId =
+            button.dataset.id;
+
+
+          const publicCode =
+            button.dataset.code;
+
+
+          const currentlyActive =
+            button.dataset.active ===
+            "true";
+
+
+          await toggleGraduateActive(
+
+            graduate,
+            graduateId,
+            publicCode,
+            currentlyActive
+
+          );
+
+        }
+
+      );
+
+  }
+
+
+
+  /* ------------------------
+     ACTIVATE / DEACTIVATE
+  ------------------------- */
+
+
+  async function toggleGraduateActive(
+
+    graduate,
+    graduateId,
+    publicCode,
+    currentlyActive
+
+  ) {
+
+
+    const newStatus =
+      !currentlyActive;
+
+
+    const action =
+      newStatus
+        ? "reactivate"
+        : "deactivate";
+
+
+    const confirmed =
+      confirm(
+        `${action} tickets for ${graduate.name}?`
+      );
+
+
+    if (!confirmed) {
+
+      return;
+
+    }
+
+
+
+    try {
+
+      const batch =
+        writeBatch(db);
+
+
+
+      batch.update(
+
+        doc(
+          db,
+          "graduates",
+          graduateId
+        ),
+
+        {
+          active:
+            newStatus
+        }
+
+      );
+
+
+
+      batch.update(
+
+        doc(
+          db,
+          "publicTickets",
+          publicCode
+        ),
+
+        {
+          active:
+            newStatus
+        }
+
+      );
+
+
+
+      if (
+        graduate.firstName &&
+        graduate.lastName &&
+        graduate.phoneLast4
+      ) {
+
+        const lookupText =
+          `${normalizeName(graduate.firstName)}|${normalizeName(graduate.lastName)}|${graduate.phoneLast4}`;
+
+
+        const claimId =
+          await sha256(
+            lookupText
+          );
+
+
+        batch.update(
+
+          doc(
+            db,
+            "ticketClaims",
+            claimId
+          ),
+
+          {
+            active:
+              newStatus
+          }
+
+        );
+
+      }
+
+
+
+      await batch.commit();
+
+
+
+      status.textContent =
+        newStatus
+          ? "✅ Graduate tickets reactivated."
+          : "✅ Graduate tickets deactivated.";
+
+
+
+      renderSearch();
+
+    }
+
+    catch (error) {
+
+      console.error(error);
+
+      status.textContent =
+        "❌ " + error.message;
+
+    }
+
+  }
+
+</script>
+
+</body>
+</html>
