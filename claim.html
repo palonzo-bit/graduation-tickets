@@ -114,7 +114,7 @@
     </div>
 
     <div class="instructions">
-      Enter your name and 6-digit birthday to access your graduation guest tickets.
+      Enter your name and the last 4 digits of the phone number on file to access your graduation guest tickets.
     </div>
 
 
@@ -133,11 +133,11 @@
     >
 
     <input
-      id="birthday"
+      id="phoneLast4"
       type="text"
       inputmode="numeric"
-      maxlength="6"
-      placeholder="Birthday MMDDYY"
+      maxlength="4"
+      placeholder="Last 4 digits of phone"
       autocomplete="off"
     >
 
@@ -171,7 +171,7 @@
 
 
     <div class="small">
-      Your birthday is used only to verify your ticket access and is not shown on your graduation ticket.
+      Use the last 4 digits of the phone number provided to the school. If you are not sure which number is on file, please see a staff member for help.
     </div>
 
   </div>
@@ -236,11 +236,11 @@
     }
 
 
-    function cleanBirthday(value) {
+    function cleanLast4(value) {
 
       return value
         .replace(/\D/g, "")
-        .slice(0, 6);
+        .slice(0, 4);
 
     }
 
@@ -290,9 +290,9 @@
           document.getElementById("lastName").value
         );
 
-      const birthday =
-        cleanBirthday(
-          document.getElementById("birthday").value
+      const phoneLast4 =
+        cleanLast4(
+          document.getElementById("phoneLast4").value
         );
 
 
@@ -308,10 +308,10 @@
       }
 
 
-      if (birthday.length !== 6) {
+      if (phoneLast4.length !== 4) {
 
         status.textContent =
-          "❌ Enter your birthday as 6 digits: MMDDYY.";
+          "❌ Enter the last 4 digits of the phone number on file.";
 
         status.classList.add("error");
 
@@ -330,7 +330,7 @@
       try {
 
         const lookupText =
-          `${firstName}|${lastName}|${birthday}`;
+          `${firstName}|${lastName}|${phoneLast4}`;
 
         const lookupHash =
           await sha256(lookupText);
@@ -351,7 +351,7 @@
         if (!claimSnap.exists()) {
 
           status.textContent =
-            "❌ We could not match that information. Please check your name and birthday or ask a staff member for help.";
+            "❌ We could not match that information. Check your name and the last 4 digits of the phone number on file, or ask a staff member for help.";
 
           status.classList.add("error");
 
@@ -453,13 +453,13 @@
 
 
     document
-      .getElementById("birthday")
+      .getElementById("phoneLast4")
       .addEventListener(
         "input",
         (event) => {
 
           event.target.value =
-            cleanBirthday(
+            cleanLast4(
               event.target.value
             );
 
