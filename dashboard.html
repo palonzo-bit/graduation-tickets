@@ -16,7 +16,7 @@
     }
 
     .container {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
     }
 
@@ -51,11 +51,22 @@
 
     button {
       margin-top: 10px;
-      padding: 12px 18px;
+      padding: 10px 16px;
       border: none;
       border-radius: 8px;
-      font-size: 16px;
+      font-size: 15px;
       cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .undo-btn {
+      margin: 0;
+      padding: 8px 12px;
+      font-size: 14px;
     }
 
     #logoutBtn {
@@ -99,7 +110,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 780px;
+      min-width: 900px;
     }
 
     th,
@@ -113,16 +124,13 @@
       background: #eef3f8;
     }
 
-    .yes {
-      font-weight: bold;
-    }
-
-    .no {
+    .yes,
+    .no,
+    .remaining {
       font-weight: bold;
     }
 
     .remaining {
-      font-weight: bold;
       font-size: 18px;
     }
 
@@ -148,9 +156,7 @@
     </div>
 
 
-    <div
-      id="loginCard"
-      class="login-card">
+    <div id="loginCard" class="login-card">
 
       <h2>Staff Login</h2>
 
@@ -173,59 +179,37 @@
     </div>
 
 
-    <div
-      id="status"
-      class="status">
+    <div id="status" class="status">
       Please sign in.
     </div>
 
 
-    <div
-      id="summary"
-      class="summary">
+    <div id="summary" class="summary">
 
       <div class="summary-card">
-        <div
-          id="totalGraduates"
-          class="summary-number">
-          0
-        </div>
+        <div id="totalGraduates" class="summary-number">0</div>
         <div>Graduates</div>
       </div>
 
       <div class="summary-card">
-        <div
-          id="claimedCount"
-          class="summary-number">
-          0
-        </div>
+        <div id="claimedCount" class="summary-number">0</div>
         <div>Claimed</div>
       </div>
 
       <div class="summary-card">
-        <div
-          id="usedCount"
-          class="summary-number">
-          0
-        </div>
+        <div id="usedCount" class="summary-number">0</div>
         <div>Guests Checked In</div>
       </div>
 
       <div class="summary-card">
-        <div
-          id="remainingCount"
-          class="summary-number">
-          0
-        </div>
+        <div id="remainingCount" class="summary-number">0</div>
         <div>Tickets Remaining</div>
       </div>
 
     </div>
 
 
-    <div
-      id="tableWrap"
-      class="table-wrap">
+    <div id="tableWrap" class="table-wrap">
 
       <table>
 
@@ -237,11 +221,11 @@
             <th>Allowed</th>
             <th>Used</th>
             <th>Remaining</th>
+            <th>Correction</th>
           </tr>
         </thead>
 
-        <tbody id="graduateTable">
-        </tbody>
+        <tbody id="graduateTable"></tbody>
 
       </table>
 
@@ -258,7 +242,10 @@
     import {
       getFirestore,
       collection,
-      onSnapshot
+      onSnapshot,
+      doc,
+      runTransaction,
+      serverTimestamp
     }
     from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
@@ -320,17 +307,13 @@
       document.getElementById("graduateTable");
 
 
-    let unsubscribeGraduates =
-      null;
+    let unsubscribeGraduates = null;
+    let unsubscribeClaims = null;
 
-    let unsubscribeClaims =
-      null;
+    let graduatesData = [];
+    let claimsData = [];
 
-    let graduatesData =
-      [];
-
-    let claimsData =
-      [];
+    let correctionInProgress = false;
 
 
     loginBtn.addEventListener(
@@ -421,6 +404,9 @@
             unsubscribeClaims = null;
           }
 
+          graduatesData = [];
+          claimsData = [];
+
           loginCard.style.display =
             "block";
 
@@ -444,22 +430,19 @@
 
     function startLiveDashboard() {
 
-      const graduatesRef =
-        collection(
-          db,
-          "graduates"
-        );
+      if (unsubscribeGraduates) {
+        unsubscribeGraduates();
+      }
 
-      const claimsRef =
-        collection(
-          db,
-          "ticketClaims"
-        );
+      if (unsubscribeClaims) {
+        unsubscribeClaims();
+      }
 
 
       unsubscribeGraduates =
         onSnapshot(
-          graduatesRef,
+          collection(db, "graduates"),
+
           (snapshot) => {
 
             graduatesData =
@@ -487,7 +470,8 @@
 
       unsubscribeClaims =
         onSnapshot(
-          claimsRef,
+          collection(db, "ticketClaims"),
+
           (snapshot) => {
 
             claimsData =
@@ -535,92 +519,92 @@
         );
 
 
-      let totalUsed =
-        0;
-
-      let totalRemaining =
-        0;
-
-      let claimedTotal =
-        0;
+      let totalUsed = 0;
+      let totalRemaining = 0;
+      let claimedTotal = 0;
 
 
       const sortedGraduates =
         [...graduatesData]
           .sort(
             (a, b) =>
-              String(a.name)
+              String(a.name || "")
                 .localeCompare(
-                  String(b.name)
+                  String(b.name || "")
                 )
           );
 
 
-      sortedGraduates
-        .forEach(
-          graduate => {
+      sortedGraduates.forEach(
+        graduate => {
 
-            const allowed =
-              Number(
-                graduate.ticketsAllowed || 0
-              );
+          const allowed =
+            Number(
+              graduate.ticketsAllowed || 0
+            );
 
-            const used =
-              Number(
-                graduate.ticketsUsed || 0
-              );
+          const used =
+            Number(
+              graduate.ticketsUsed || 0
+            );
 
-            const remaining =
-              allowed - used;
+          const remaining =
+            allowed - used;
 
-            const claimed =
-              claimedCodes.has(
-                graduate.publicTicketCode
-              );
-
-
-            totalUsed +=
-              used;
-
-            totalRemaining +=
-              remaining;
-
-            if (claimed) {
-              claimedTotal += 1;
-            }
+          const claimed =
+            claimedCodes.has(
+              graduate.publicTicketCode
+            );
 
 
-            const row =
-              document.createElement("tr");
+          totalUsed += used;
+          totalRemaining += remaining;
 
-
-            row.innerHTML = `
-              <td>${graduate.name || ""}</td>
-              <td>${graduate.studentID || ""}</td>
-
-              <td class="${claimed ? "yes" : "no"}">
-                ${claimed ? "✅ Yes" : "❌ No"}
-              </td>
-
-              <td>
-                ${allowed}
-              </td>
-
-              <td>
-                ${used}
-              </td>
-
-              <td class="remaining">
-                ${remaining}
-              </td>
-            `;
-
-
-            graduateTable
-              .appendChild(row);
-
+          if (claimed) {
+            claimedTotal += 1;
           }
-        );
+
+
+          const row =
+            document.createElement("tr");
+
+
+          row.innerHTML = `
+            <td>${graduate.name || ""}</td>
+
+            <td>
+              ${graduate.studentID || ""}
+            </td>
+
+            <td class="${claimed ? "yes" : "no"}">
+              ${claimed ? "✅ Yes" : "❌ No"}
+            </td>
+
+            <td>${allowed}</td>
+
+            <td>${used}</td>
+
+            <td class="remaining">
+              ${remaining}
+            </td>
+
+            <td>
+              <button
+                class="undo-btn"
+                data-id="${graduate.id}"
+                ${used <= 0 ? "disabled" : ""}
+              >
+                ↩️ Undo 1
+              </button>
+            </td>
+          `;
+
+
+          graduateTable
+            .appendChild(row);
+
+        }
+      );
 
 
       document
@@ -645,6 +629,254 @@
         .getElementById("remainingCount")
         .textContent =
         totalRemaining;
+
+
+      document
+        .querySelectorAll(".undo-btn")
+        .forEach(
+          button => {
+
+            button.addEventListener(
+              "click",
+              async () => {
+
+                const graduateId =
+                  button.dataset.id;
+
+                await undoOneTicket(
+                  graduateId
+                );
+
+              }
+            );
+
+          }
+        );
+
+    }
+
+
+    async function undoOneTicket(
+      graduateId
+    ) {
+
+      if (correctionInProgress) {
+        return;
+      }
+
+
+      const graduate =
+        graduatesData.find(
+          item =>
+            item.id === graduateId
+        );
+
+
+      if (!graduate) {
+
+        status.textContent =
+          "❌ Graduate record not found.";
+
+        return;
+
+      }
+
+
+      const currentUsed =
+        Number(
+          graduate.ticketsUsed || 0
+        );
+
+
+      if (currentUsed <= 0) {
+
+        status.textContent =
+          "❌ There are no used tickets to undo.";
+
+        return;
+
+      }
+
+
+      const confirmed =
+        confirm(
+          `Undo 1 guest check-in for ${graduate.name}?`
+        );
+
+
+      if (!confirmed) {
+        return;
+      }
+
+
+      correctionInProgress =
+        true;
+
+
+      status.textContent =
+        "Processing correction...";
+
+
+      try {
+
+        const graduateRef =
+          doc(
+            db,
+            "graduates",
+            graduateId
+          );
+
+
+        await runTransaction(
+          db,
+
+          async transaction => {
+
+            const graduateSnap =
+              await transaction.get(
+                graduateRef
+              );
+
+
+            if (!graduateSnap.exists()) {
+
+              throw new Error(
+                "Graduate record not found."
+              );
+
+            }
+
+
+            const data =
+              graduateSnap.data();
+
+
+            const used =
+              Number(
+                data.ticketsUsed || 0
+              );
+
+
+            if (used <= 0) {
+
+              throw new Error(
+                "There are no used tickets to undo."
+              );
+
+            }
+
+
+            if (!data.publicTicketCode) {
+
+              throw new Error(
+                "Public ticket code is missing."
+              );
+
+            }
+
+
+            const publicTicketRef =
+              doc(
+                db,
+                "publicTickets",
+                data.publicTicketCode
+              );
+
+
+            const publicTicketSnap =
+              await transaction.get(
+                publicTicketRef
+              );
+
+
+            if (!publicTicketSnap.exists()) {
+
+              throw new Error(
+                "Public ticket record not found."
+              );
+
+            }
+
+
+            const newUsed =
+              used - 1;
+
+
+            transaction.update(
+              graduateRef,
+              {
+                ticketsUsed: newUsed
+              }
+            );
+
+
+            transaction.update(
+              publicTicketRef,
+              {
+                ticketsUsed: newUsed
+              }
+            );
+
+
+            const correctionRef =
+              doc(
+                collection(
+                  db,
+                  "checkIns"
+                )
+              );
+
+
+            transaction.set(
+              correctionRef,
+              {
+                graduateId:
+                  graduateId,
+
+                graduateName:
+                  data.name,
+
+                studentId:
+                  data.studentID,
+
+                guestCount:
+                  -1,
+
+                eventType:
+                  "correction",
+
+                staffEmail:
+                  auth.currentUser.email,
+
+                timestamp:
+                  serverTimestamp()
+              }
+            );
+
+          }
+        );
+
+
+        status.textContent =
+          `✅ 1 ticket restored for ${graduate.name}.`;
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+          "❌ " + error.message;
+
+      }
+
+      finally {
+
+        correctionInProgress =
+          false;
+
+      }
 
     }
 
