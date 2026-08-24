@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Graduation Ticket Import</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 25px 15px;
+      color: #222;
+    }
+
+    .card {
+      max-width: 700px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 18px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 13px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 12px;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .box {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #eef3f8;
+    }
+
+    .warning {
+      background: #fff6d9;
+      line-height: 1.5;
+    }
+
+    .success {
+      background: #eef8ee;
+    }
+
+    .error {
+      background: #fdecec;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .big-number {
+      font-size: 42px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    progress {
+      width: 100%;
+      height: 24px;
+      margin-top: 12px;
+    }
+
+    #logoutBtn {
+      width: auto;
+      display: none;
+      margin: 10px auto;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <h1>🎓 Graduation Ticket Import</h1>
+
+  <div class="subtitle">
+    Clark County Acceleration Academies
+  </div>
+
+
+  <div id="loginSection">
+
+    <h2>Staff Login</h2>
+
+    <input
+      id="email"
+      type="email"
+      placeholder="Staff email"
+    >
+
+    <input
+      id="password"
+      type="password"
+      placeholder="Password"
+    >
+
+    <button id="loginBtn">
+      Sign In
+    </button>
+
+  </div>
+
+
+  <button id="logoutBtn">
+    Sign Out
+  </button>
+
+
+  <div id="status" class="box">
+    Please sign in.
+  </div>
+
+
+  <div
+    id="importSection"
+    class="hidden">
+
+    <div class="box warning">
+
+      <strong>Important:</strong>
+
+      This tool creates graduate ticket records in Firebase.
+
+      Only use the final approved graduation import file.
+
+    </div>
+
+
+    <h2>1. Choose Import File</h2>
+
+    <input
+      id="fileInput"
+      type="file"
+      accept=".json,application/json"
+    >
+
+
+    <div
+      id="fileSummary"
+      class="box hidden">
+
+      <div class="center">
+        Graduates ready to import
+      </div>
+
+      <div
+        id="recordCount"
+        class="big-number">
+        0
+      </div>
+
+    </div>
+
+
+    <button
+      id="importBtn"
+      disabled>
+      Import Graduates to Firebase
+    </button>
+
+
+    <div
+      id="progressBox"
+      class="box hidden">
+
+      <div id="progressText">
+        Preparing import...
+      </div>
+
+      <progress
+        id="progressBar"
+        value="0"
+        max="100">
+      </progress>
+
+    </div>
+
+
+    <div
+      id="resultsBox"
+      class="box hidden">
+    </div>
+
+  </div>
+
+</div>
+
+
+<script type="module">
+
+  import { initializeApp }
+  from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+
+  import {
+    getFirestore,
+    doc,
+    getDoc,
+    writeBatch
+  }
+  from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+  }
+  from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
+
+  const firebaseConfig = {
+
+    apiKey:
+      "AIzaSyAk7ZT1pCcN7wFY0rHRRoCbDvHEHGBoptY",
+
+    authDomain:
+      "graduation-tickets-1897c.firebaseapp.com",
+
+    projectId:
+      "graduation-tickets-1897c",
+
+    storageBucket:
+      "graduation-tickets-1897c.firebasestorage.app",
+
+    messagingSenderId:
+      "570671585141",
+
+    appId:
+      "1:570671585141:web:65c2c0436eead0e184e53c"
+
+  };
+
+
+  const app =
+    initializeApp(firebaseConfig);
+
+  const db =
+    getFirestore(app);
+
+  const auth =
+    getAuth(app);
+
+
+  const loginSection =
+    document.getElementById("loginSection");
+
+  const loginBtn =
+    document.getElementById("loginBtn");
+
+  const logoutBtn =
+    document.getElementById("logoutBtn");
+
+  const status =
+    document.getElementById("status");
+
+  const importSection =
+    document.getElementById("importSection");
+
+  const fileInput =
+    document.getElementById("fileInput");
+
+  const fileSummary =
+    document.getElementById("fileSummary");
+
+  const recordCount =
+    document.getElementById("recordCount");
+
+  const importBtn =
+    document.getElementById("importBtn");
+
+  const progressBox =
+    document.getElementById("progressBox");
+
+  const progressText =
+    document.getElementById("progressText");
+
+  const progressBar =
+    document.getElementById("progressBar");
+
+  const resultsBox =
+    document.getElementById("resultsBox");
+
+
+  let importData =
+    null;
+
+  let importRunning =
+    false;
+
+
+  loginBtn.addEventListener(
+    "click",
+
+    async () => {
+
+      const email =
+        document
+          .getElementById("email")
+          .value
+          .trim();
+
+      const password =
+        document
+          .getElementById("password")
+          .value;
+
+
+      status.textContent =
+        "Signing in...";
+
+
+      try {
+
+        await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+          "❌ Unable to sign in. Check your email and password.";
+
+      }
+
+    }
+  );
+
+
+  logoutBtn.addEventListener(
+    "click",
+
+    async () => {
+
+      await signOut(auth);
+
+    }
+  );
+
+
+  onAuthStateChanged(
+    auth,
+
+    user => {
+
+      if (user) {
+
+        loginSection.style.display =
+          "none";
+
+        logoutBtn.style.display =
+          "block";
+
+        importSection.classList.remove(
+          "hidden"
+        );
+
+        status.textContent =
+          `✅ Signed in as ${user.email}`;
+
+      }
+
+      else {
+
+        loginSection.style.display =
+          "block";
+
+        logoutBtn.style.display =
+          "none";
+
+        importSection.classList.add(
+          "hidden"
+        );
+
+        status.textContent =
+          "Please sign in.";
+
+        importData =
+          null;
+
+      }
+
+    }
+  );
+
+
+  fileInput.addEventListener(
+    "change",
+
+    async event => {
+
+      importBtn.disabled =
+        true;
+
+      fileSummary.classList.add(
+        "hidden"
+      );
+
+      resultsBox.classList.add(
+        "hidden"
+      );
+
+
+      const file =
+        event.target.files[0];
+
+
+      if (!file) {
+        return;
+      }
+
+
+      try {
+
+        const text =
+          await file.text();
+
+        const parsed =
+          JSON.parse(text);
+
+
+        if (
+          !parsed.records ||
+          !Array.isArray(parsed.records)
+        ) {
+
+          throw new Error(
+            "This is not a valid graduation import file."
+          );
+
+        }
+
+
+        if (
+          parsed.records.length === 0
+        ) {
+
+          throw new Error(
+            "The import file contains no graduates."
+          );
+
+        }
+
+
+        for (
+          const record of parsed.records
+        ) {
+
+          if (
+            !record.graduateId ||
+            !record.claimId ||
+            !record.graduate ||
+            !record.publicTicket ||
+            !record.ticketClaim ||
+            !record.graduate.publicTicketCode
+          ) {
+
+            throw new Error(
+              "The import file is missing required ticket information."
+            );
+
+          }
+
+        }
+
+
+        importData =
+          parsed;
+
+
+        recordCount.textContent =
+          parsed.records.length;
+
+
+        fileSummary.classList.remove(
+          "hidden"
+        );
+
+
+        importBtn.disabled =
+          false;
+
+
+        status.textContent =
+          "✅ Import file checked and ready.";
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        importData =
+          null;
+
+        status.textContent =
+          "❌ " + error.message;
+
+      }
+
+    }
+  );
+
+
+  importBtn.addEventListener(
+    "click",
+
+    async () => {
+
+      if (
+        !importData ||
+        importRunning
+      ) {
+
+        return;
+
+      }
+
+
+      const count =
+        importData.records.length;
+
+
+      const confirmed =
+        confirm(
+          `Import ${count} graduates into Firebase?`
+        );
+
+
+      if (!confirmed) {
+        return;
+      }
+
+
+      importRunning =
+        true;
+
+      importBtn.disabled =
+        true;
+
+      fileInput.disabled =
+        true;
+
+      progressBox.classList.remove(
+        "hidden"
+      );
+
+      resultsBox.classList.add(
+        "hidden"
+      );
+
+
+      try {
+
+        /*
+          First check whether any generated
+          graduate IDs already exist.
+
+          This helps prevent accidentally
+          running the exact same import twice.
+        */
+
+        progressText.textContent =
+          "Checking import file...";
+
+
+        const sampleChecks =
+          importData.records.slice(
+            0,
+            Math.min(10, count)
+          );
+
+
+        for (
+          const record of sampleChecks
+        ) {
+
+          const existing =
+            await getDoc(
+              doc(
+                db,
+                "graduates",
+                record.graduateId
+              )
+            );
+
+
+          if (existing.exists()) {
+
+            throw new Error(
+              "This import appears to have already been run. Import stopped to prevent duplicates."
+            );
+
+          }
+
+        }
+
+
+        /*
+          Firestore batches support a limited
+          number of writes.
+
+          Each graduate needs 3 documents:
+          graduates
+          publicTickets
+          ticketClaims
+
+          We use groups of 100 graduates
+          = 300 writes per batch.
+        */
+
+        const batchSize =
+          100;
+
+
+        let imported =
+          0;
+
+
+        for (
+          let start = 0;
+          start < count;
+          start += batchSize
+        ) {
+
+          const group =
+            importData.records.slice(
+              start,
+              start + batchSize
+            );
+
+
+          const batch =
+            writeBatch(db);
+
+
+          for (
+            const record of group
+          ) {
+
+            const publicCode =
+              record.graduate
+                .publicTicketCode;
+
+
+            const graduateRef =
+              doc(
+                db,
+                "graduates",
+                record.graduateId
+              );
+
+
+            const publicRef =
+              doc(
+                db,
+                "publicTickets",
+                publicCode
+              );
+
+
+            const claimRef =
+              doc(
+                db,
+                "ticketClaims",
+                record.claimId
+              );
+
+
+            batch.set(
+              graduateRef,
+              record.graduate
+            );
+
+
+            batch.set(
+              publicRef,
+              record.publicTicket
+            );
+
+
+            batch.set(
+              claimRef,
+              record.ticketClaim
+            );
+
+          }
+
+
+          await batch.commit();
+
+
+          imported +=
+            group.length;
+
+
+          const percent =
+            Math.round(
+              (imported / count) * 100
+            );
+
+
+          progressBar.value =
+            percent;
+
+
+          progressText.textContent =
+            `Imported ${imported} of ${count} graduates...`;
+
+        }
+
+
+        progressBar.value =
+          100;
+
+
+        progressText.textContent =
+          "Import complete!";
+
+
+        resultsBox.className =
+          "box success";
+
+
+        resultsBox.innerHTML =
+          `
+            <strong>🎉 Import complete!</strong>
+            <br><br>
+            ${imported} graduates were imported.
+            <br><br>
+            Each graduate received:
+            <br>
+            • Graduate record
+            <br>
+            • Public mobile ticket
+            <br>
+            • Ticket claim record
+            <br>
+            • 7 guest tickets
+            <br>
+            • 0 tickets used
+          `;
+
+
+        resultsBox.classList.remove(
+          "hidden"
+        );
+
+
+        status.textContent =
+          "✅ Graduation roster imported successfully.";
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+
+        resultsBox.className =
+          "box error";
+
+
+        resultsBox.textContent =
+          "❌ Import stopped: " +
+          error.message;
+
+
+        resultsBox.classList.remove(
+          "hidden"
+        );
+
+
+        status.textContent =
+          "❌ Import was not completed.";
+
+      }
+
+      finally {
+
+        importRunning =
+          false;
+
+        fileInput.disabled =
+          false;
+
+      }
+
+    }
+  );
+
+</script>
+
+</body>
+</html>
